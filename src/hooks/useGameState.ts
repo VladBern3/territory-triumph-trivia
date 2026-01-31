@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { GameState, Player, Territory, Answer, Question } from '@/types/game';
-import { initialTerritories } from '@/data/territories';
+import { initialTerritories, getMaximallyDistantTerritories } from '@/data/territories';
 import { getRandomNumericQuestion, getRandomMultipleChoiceQuestion } from '@/data/questions';
 
 export function useGameState() {
@@ -27,15 +27,32 @@ export function useGameState() {
     [gameState.territories]
   );
 
-  // Initialize game with players
+  // Initialize game with players - auto-assign starting territories maximally apart
   const startGame = useCallback((playerData: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>[]) => {
-    const players: Player[] = playerData.map(p => ({
-      ...p,
-      territories: [],
-      capitalId: null,
-      isEliminated: false,
-      score: 0,
-    }));
+    // Get starting territories that are maximally far apart
+    const startingTerritoryIds = getMaximallyDistantTerritories(playerData.length);
+    
+    // Create a fresh copy of territories
+    const newTerritories = initialTerritories.map(t => ({ ...t, ownerId: null, isCapital: false }));
+    
+    // Create players with their starting territories
+    const players: Player[] = playerData.map((p, index) => {
+      const startingTerritoryId = startingTerritoryIds[index];
+      const territory = newTerritories.find(t => t.id === startingTerritoryId);
+      
+      if (territory) {
+        territory.ownerId = p.id;
+        territory.isCapital = true;
+      }
+      
+      return {
+        ...p,
+        territories: startingTerritoryId ? [startingTerritoryId] : [],
+        capitalId: startingTerritoryId || null,
+        isEliminated: false,
+        score: 0,
+      };
+    });
 
     const firstQuestion = getRandomNumericQuestion([]);
     
@@ -43,6 +60,7 @@ export function useGameState() {
       ...prev,
       phase: 'settlement',
       players,
+      territories: newTerritories,
       currentQuestion: firstQuestion,
       currentTurnPlayerId: players[0].id,
       roundNumber: 1,

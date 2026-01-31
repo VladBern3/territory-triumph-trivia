@@ -1,5 +1,5 @@
 import { GameState, Player, Territory } from '@/types/game';
-import { HexMap } from './HexMap';
+import { CzechMap } from './CzechMap';
 import { PlayerPanel } from './PlayerPanel';
 import { QuestionCard } from './QuestionCard';
 import { BattleInfo } from './BattleInfo';
@@ -86,7 +86,7 @@ export function GameBoard({
       {/* Map */}
       <Card className="medieval-border bg-card/80 backdrop-blur overflow-hidden">
         <CardContent className="p-4">
-          <HexMap
+          <CzechMap
             territories={territories}
             players={players}
             selectedTerritoryId={targetTerritoryId}
