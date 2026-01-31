@@ -1,13 +1,40 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { GameLobby } from '@/components/game/GameLobby';
+import { GameBoard } from '@/components/game/GameBoard';
+import { GameOverScreen } from '@/components/game/GameOverScreen';
+import { useGameState } from '@/hooks/useGameState';
 
 const Index = () => {
+  const {
+    gameState,
+    startGame,
+    submitAnswer,
+    selectAttackTarget,
+    getAttackableTerritories,
+    resetGame,
+    answers,
+  } = useGameState();
+
+  const { phase, winner } = gameState;
+
+  // Lobby phase
+  if (phase === 'lobby') {
+    return <GameLobby onStartGame={startGame} />;
+  }
+
+  // Game over phase
+  if (phase === 'game_over' && winner) {
+    return <GameOverScreen winner={winner} onPlayAgain={resetGame} />;
+  }
+
+  // Active game phases
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <GameBoard
+      gameState={gameState}
+      onSubmitAnswer={submitAnswer}
+      onSelectTarget={selectAttackTarget}
+      attackableTerritories={getAttackableTerritories()}
+      waitingForAnswers={answers.length > 0}
+    />
   );
 };
 
