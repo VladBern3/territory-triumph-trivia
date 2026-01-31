@@ -52,31 +52,28 @@ export function CzechMap({
     highlightedTerritories.includes(territoryId);
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
+    <div className="relative w-full h-full flex items-center justify-center">
       <svg
         viewBox="0 0 820 480"
-        className="w-full h-auto"
-        style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))' }}
+        className="w-full h-full max-w-6xl"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))' }}
       >
         {/* Background with parchment texture */}
         <defs>
-          <filter id="paper-texture">
-            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise" />
-            <feDiffuseLighting in="noise" lightingColor="hsl(38, 30%, 90%)" surfaceScale="2" result="lit">
-              <feDistantLight azimuth="45" elevation="60" />
-            </feDiffuseLighting>
-            <feBlend in="SourceGraphic" in2="lit" mode="multiply" />
-          </filter>
           <linearGradient id="map-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(38, 25%, 92%)" />
             <stop offset="100%" stopColor="hsl(38, 30%, 85%)" />
           </linearGradient>
+          <filter id="territory-shadow">
+            <feDropShadow dx="1" dy="1" stdDeviation="2" floodOpacity="0.3" />
+          </filter>
         </defs>
         
         <rect x="0" y="0" width="820" height="480" fill="url(#map-gradient)" rx="12" />
         
         {/* Border connections (showing neighboring territories) */}
-        <g className="border-lines" opacity="0.3">
+        <g className="border-lines" opacity="0.2">
           {territories.map(territory => 
             territory.neighbors.map(neighborId => {
               const neighbor = territories.find(t => t.id === neighborId);
@@ -88,9 +85,9 @@ export function CzechMap({
                   y1={territory.position.y}
                   x2={neighbor.position.x}
                   y2={neighbor.position.y}
-                  stroke="hsl(38, 20%, 50%)"
+                  stroke="hsl(38, 20%, 40%)"
                   strokeWidth="1"
-                  strokeDasharray="4,4"
+                  strokeDasharray="3,3"
                 />
               );
             })
@@ -109,16 +106,16 @@ export function CzechMap({
               <path
                 d={territory.path}
                 className={cn(
-                  'transition-all duration-200 stroke-2',
+                  'transition-all duration-200 stroke-[1.5]',
                   getPlayerColor(territory.ownerId),
                   getPlayerStrokeColor(territory.ownerId),
-                  selectable && 'cursor-pointer hover:brightness-110 hover:stroke-[3]',
-                  !selectable && 'opacity-60 cursor-not-allowed',
-                  isSelected && 'brightness-125 stroke-[4] stroke-gold-accent',
+                  selectable && 'cursor-pointer hover:brightness-110 hover:stroke-[2.5]',
+                  !selectable && 'opacity-70 cursor-not-allowed',
+                  isSelected && 'brightness-125 stroke-[3] stroke-gold-accent',
                   highlighted && 'animate-pulse'
                 )}
                 style={{
-                  filter: isSelected ? 'drop-shadow(0 0 8px hsl(38, 70%, 50%))' : undefined,
+                  filter: isSelected ? 'drop-shadow(0 0 12px hsl(38, 70%, 50%))' : 'url(#territory-shadow)',
                 }}
                 onClick={() => selectable && onTerritoryClick(territory.id)}
                 fillRule="evenodd"
@@ -127,32 +124,30 @@ export function CzechMap({
               {/* Territory name label */}
               <text
                 x={territory.position.x}
-                y={territory.position.y}
+                y={territory.position.y + (territory.isCapital ? 8 : 0)}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                className={cn(
-                  'text-[9px] font-display fill-foreground pointer-events-none select-none',
-                  territory.ownerId ? 'fill-primary-foreground' : 'fill-muted-foreground'
-                )}
+                className="text-[10px] font-display pointer-events-none select-none"
+                fill={territory.ownerId ? 'white' : 'hsl(38, 20%, 30%)'}
                 style={{
-                  textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+                  textShadow: territory.ownerId 
+                    ? '0 1px 2px rgba(0,0,0,0.5)' 
+                    : '0 1px 1px rgba(255,255,255,0.8)',
                   fontWeight: 600
                 }}
               >
-                {territory.name.split(' ')[0]}
+                {territory.name.length > 12 ? territory.name.split(' ')[0] : territory.name}
               </text>
 
               {/* Capital marker */}
               {territory.isCapital && (
-                <g transform={`translate(${territory.position.x - 8}, ${territory.position.y - 25})`}>
-                  <Castle className="w-4 h-4 text-gold-accent drop-shadow-md" fill="currentColor" />
-                </g>
-              )}
-
-              {/* Crown for capitals */}
-              {territory.isCapital && (
-                <g transform={`translate(${territory.position.x + 4}, ${territory.position.y - 25})`}>
-                  <Crown className="w-4 h-4 text-gold-shine drop-shadow-md" fill="currentColor" />
+                <g transform={`translate(${territory.position.x - 12}, ${territory.position.y - 22})`}>
+                  <Castle className="w-6 h-6 text-gold-accent drop-shadow-lg" fill="currentColor" />
+                  <Crown 
+                    className="w-4 h-4 text-gold-shine absolute drop-shadow-md" 
+                    fill="currentColor" 
+                    style={{ transform: 'translate(16px, -4px)' }}
+                  />
                 </g>
               )}
 
@@ -165,23 +160,15 @@ export function CzechMap({
         {/* Map title */}
         <text
           x="410"
-          y="35"
+          y="30"
           textAnchor="middle"
-          className="font-display text-xl fill-primary"
+          className="font-display text-lg"
+          fill="hsl(38, 30%, 35%)"
           style={{ fontWeight: 700 }}
         >
           Čechy a Morava
         </text>
       </svg>
-
-      {/* Selected territory info */}
-      {selectedTerritoryId && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-card text-card-foreground px-4 py-2 rounded-md medieval-border animate-fade-in shadow-lg">
-          <p className="font-display text-sm">
-            {territories.find(t => t.id === selectedTerritoryId)?.name}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
