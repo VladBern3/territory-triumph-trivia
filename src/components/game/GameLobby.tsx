@@ -68,7 +68,7 @@ export function GameLobby({ onStartGame }: GameLobbyProps) {
             </div>
           </div>
           <CardTitle className="font-display text-4xl gold-text">
-            Conquiztador
+            Quiz Empire
           </CardTitle>
           <CardDescription className="text-lg mt-2">
             Викторина-стратегия на завоевание земель
