@@ -18,6 +18,14 @@ export interface Territory {
   path: string; // SVG path for the territory shape
 }
 
+export interface TerritoryAnimation {
+  territoryId: string;
+  playerId: string;
+  startTime: number;
+  duration: number;
+  isCapital?: boolean;
+}
+
 export interface Question {
   id: string;
   type: 'numeric' | 'multiple_choice';
@@ -28,7 +36,7 @@ export interface Question {
 }
 
 export interface GameState {
-  phase: 'lobby' | 'settlement' | 'war' | 'capital_battle' | 'game_over';
+  phase: 'lobby' | 'initializing' | 'settlement' | 'war' | 'capital_battle' | 'game_over';
   players: Player[];
   territories: Territory[];
   currentQuestion: Question | null;
@@ -39,6 +47,7 @@ export interface GameState {
   roundNumber: number;
   capitalBattleRound: number; // 1, 2, or 3 for capital battles
   winner: Player | null;
+  currentAnimation: TerritoryAnimation | null;
 }
 
 export interface Answer {

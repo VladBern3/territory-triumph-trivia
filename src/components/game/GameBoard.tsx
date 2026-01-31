@@ -3,7 +3,7 @@ import { CzechMap } from './CzechMap';
 import { PlayerPanel } from './PlayerPanel';
 import { QuestionModal } from './QuestionModal';
 import { BattleInfo } from './BattleInfo';
-import { Swords, Target } from 'lucide-react';
+import { Swords, Target, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
@@ -32,6 +32,7 @@ export function GameBoard({
     targetTerritoryId,
     roundNumber,
     capitalBattleRound,
+    currentAnimation,
   } = gameState;
 
   const currentPlayer = players.find(p => p.id === currentTurnPlayerId);
@@ -39,11 +40,12 @@ export function GameBoard({
   const defender = players.find(p => p.id === defendingPlayerId);
   const targetTerritory = territories.find(t => t.id === targetTerritoryId);
 
+  const isInitializing = phase === 'initializing';
   const isSelectingTarget = phase === 'war' && !targetTerritoryId && currentTurnPlayerId;
   const isBattleActive = (phase === 'war' || phase === 'capital_battle') && targetTerritoryId;
   
-  // Show question modal when there's a question and not selecting target
-  const showQuestionModal = currentQuestion && !isSelectingTarget;
+  // Show question modal when there's a question and not selecting target and not initializing
+  const showQuestionModal = currentQuestion && !isSelectingTarget && !isInitializing;
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden parchment-texture">
@@ -58,6 +60,7 @@ export function GameBoard({
       <div className="absolute top-4 right-4 z-10">
         <div className="bg-card/90 backdrop-blur-sm px-4 py-2 rounded-lg medieval-border">
           <p className="text-sm text-muted-foreground">
+            {phase === 'initializing' && 'Распределение территорий...'}
             {phase === 'settlement' && 'Фаза расселения'}
             {phase === 'war' && 'Фаза войны'}
             {phase === 'capital_battle' && 'Битва за столицу!'}
@@ -65,8 +68,22 @@ export function GameBoard({
         </div>
       </div>
 
+      {/* Initializing overlay */}
+      {isInitializing && currentAnimation && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 animate-fade-in">
+          <div className="bg-card/95 backdrop-blur-sm px-6 py-3 rounded-lg medieval-border shadow-lg">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-gold-accent" />
+              <p className="font-display text-lg">
+                {players.find(p => p.id === currentAnimation.playerId)?.name} получает начальную территорию...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Battle Info - top left when active */}
-      {(phase === 'settlement' || isBattleActive) && (
+      {(phase === 'settlement' || isBattleActive) && !isInitializing && (
         <div className="absolute top-4 left-4 z-10">
           <BattleInfo
             phase={phase}
@@ -90,6 +107,7 @@ export function GameBoard({
           onTerritoryClick={isSelectingTarget ? onSelectTarget : () => {}}
           selectableTerritories={isSelectingTarget ? attackableTerritories : []}
           highlightedTerritories={isBattleActive && targetTerritoryId ? [targetTerritoryId] : []}
+          currentAnimation={currentAnimation}
         />
       </div>
 
@@ -129,7 +147,6 @@ export function GameBoard({
         attacker={attacker}
         defender={defender}
         onSubmitAnswer={onSubmitAnswer}
-        waitingForAnswers={waitingForAnswers}
         capitalBattleRound={capitalBattleRound}
         currentPlayerId={currentTurnPlayerId}
         players={players}
