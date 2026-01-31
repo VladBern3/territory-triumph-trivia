@@ -1,31 +1,201 @@
 import { Territory } from '@/types/game';
 
-// Hexagonal grid layout - 19 territories
+// Czech Republic regions (14 kraje) with simplified SVG paths
+// viewBox is 0 0 800 500 for the map
 export const initialTerritories: Territory[] = [
-  // Top row
-  { id: 't1', name: 'Северные Горы', ownerId: null, isCapital: false, neighbors: ['t2', 't5', 't6'], position: { x: 200, y: 60 }, path: 'M200,30 L250,55 L250,105 L200,130 L150,105 L150,55 Z' },
-  { id: 't2', name: 'Ледяной Край', ownerId: null, isCapital: false, neighbors: ['t1', 't3', 't6', 't7'], position: { x: 310, y: 60 }, path: 'M310,30 L360,55 L360,105 L310,130 L260,105 L260,55 Z' },
-  { id: 't3', name: 'Восточный Пик', ownerId: null, isCapital: false, neighbors: ['t2', 't4', 't7', 't8'], position: { x: 420, y: 60 }, path: 'M420,30 L470,55 L470,105 L420,130 L370,105 L370,55 Z' },
-  { id: 't4', name: 'Туманная Долина', ownerId: null, isCapital: false, neighbors: ['t3', 't8', 't9'], position: { x: 530, y: 60 }, path: 'M530,30 L580,55 L580,105 L530,130 L480,105 L480,55 Z' },
-  
-  // Upper middle row
-  { id: 't5', name: 'Западный Лес', ownerId: null, isCapital: false, neighbors: ['t1', 't6', 't10', 't11'], position: { x: 145, y: 145 }, path: 'M145,115 L195,140 L195,190 L145,215 L95,190 L95,140 Z' },
-  { id: 't6', name: 'Серебряная Река', ownerId: null, isCapital: false, neighbors: ['t1', 't2', 't5', 't7', 't11', 't12'], position: { x: 255, y: 145 }, path: 'M255,115 L305,140 L305,190 L255,215 L205,190 L205,140 Z' },
-  { id: 't7', name: 'Центральные Равнины', ownerId: null, isCapital: false, neighbors: ['t2', 't3', 't6', 't8', 't12', 't13'], position: { x: 365, y: 145 }, path: 'M365,115 L415,140 L415,190 L365,215 L315,190 L315,140 Z' },
-  { id: 't8', name: 'Янтарный Холм', ownerId: null, isCapital: false, neighbors: ['t3', 't4', 't7', 't9', 't13', 't14'], position: { x: 475, y: 145 }, path: 'M475,115 L525,140 L525,190 L475,215 L425,190 L425,140 Z' },
-  { id: 't9', name: 'Восточная Крепость', ownerId: null, isCapital: false, neighbors: ['t4', 't8', 't14', 't15'], position: { x: 585, y: 145 }, path: 'M585,115 L635,140 L635,190 L585,215 L535,190 L535,140 Z' },
-  
-  // Middle row
-  { id: 't10', name: 'Дремучая Чаща', ownerId: null, isCapital: false, neighbors: ['t5', 't11', 't16'], position: { x: 200, y: 230 }, path: 'M200,200 L250,225 L250,275 L200,300 L150,275 L150,225 Z' },
-  { id: 't11', name: 'Старый Мост', ownerId: null, isCapital: false, neighbors: ['t5', 't6', 't10', 't12', 't16', 't17'], position: { x: 310, y: 230 }, path: 'M310,200 L360,225 L360,275 L310,300 L260,275 L260,225 Z' },
-  { id: 't12', name: 'Королевский Трон', ownerId: null, isCapital: false, neighbors: ['t6', 't7', 't11', 't13', 't17', 't18'], position: { x: 420, y: 230 }, path: 'M420,200 L470,225 L470,275 L420,300 L370,275 L370,225 Z' },
-  { id: 't13', name: 'Торговый Путь', ownerId: null, isCapital: false, neighbors: ['t7', 't8', 't12', 't14', 't18', 't19'], position: { x: 530, y: 230 }, path: 'M530,200 L580,225 L580,275 L530,300 L480,275 L480,225 Z' },
-  { id: 't14', name: 'Восточные Врата', ownerId: null, isCapital: false, neighbors: ['t8', 't9', 't13', 't15', 't19'], position: { x: 640, y: 230 }, path: 'M640,200 L690,225 L690,275 L640,300 L590,275 L590,225 Z' },
-  
-  // Bottom row
-  { id: 't15', name: 'Южный Порт', ownerId: null, isCapital: false, neighbors: ['t9', 't14', 't19'], position: { x: 585, y: 315 }, path: 'M585,285 L635,310 L635,360 L585,385 L535,360 L535,310 Z' },
-  { id: 't16', name: 'Заброшенные Шахты', ownerId: null, isCapital: false, neighbors: ['t10', 't11', 't17'], position: { x: 255, y: 315 }, path: 'M255,285 L305,310 L305,360 L255,385 L205,360 L205,310 Z' },
-  { id: 't17', name: 'Золотые Поля', ownerId: null, isCapital: false, neighbors: ['t11', 't12', 't16', 't18'], position: { x: 365, y: 315 }, path: 'M365,285 L415,310 L415,360 L365,385 L315,360 L315,310 Z' },
-  { id: 't18', name: 'Южные Виноградники', ownerId: null, isCapital: false, neighbors: ['t12', 't13', 't17', 't19'], position: { x: 475, y: 315 }, path: 'M475,285 L525,310 L525,360 L475,385 L425,360 L425,310 Z' },
-  { id: 't19', name: 'Древние Руины', ownerId: null, isCapital: false, neighbors: ['t13', 't14', 't15', 't18'], position: { x: 585, y: 315 }, path: 'M585,285 L635,310 L635,360 L585,385 L535,360 L535,310 Z' },
+  // Praha (Prague) - center, small
+  {
+    id: 'CZ010',
+    name: 'Praha',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020'],
+    position: { x: 380, y: 205 },
+    path: 'M368,195 L392,195 L398,205 L392,220 L368,220 L362,205 Z'
+  },
+  // Středočeský kraj - surrounds Prague
+  {
+    id: 'CZ020',
+    name: 'Středočeský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ010', 'CZ031', 'CZ032', 'CZ041', 'CZ042', 'CZ051', 'CZ053'],
+    position: { x: 380, y: 250 },
+    path: 'M300,160 L340,145 L420,150 L460,175 L470,220 L450,270 L400,300 L340,290 L290,250 L280,200 L300,160 M368,195 L392,195 L398,205 L392,220 L368,220 L362,205 Z'
+  },
+  // Jihočeský kraj - South Bohemia
+  {
+    id: 'CZ031',
+    name: 'Jihočeský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ032', 'CZ063'],
+    position: { x: 340, y: 380 },
+    path: 'M240,290 L290,250 L340,290 L400,300 L420,340 L400,400 L350,430 L280,420 L220,380 L200,330 L240,290'
+  },
+  // Plzeňský kraj - Pilsen region
+  {
+    id: 'CZ032',
+    name: 'Plzeňský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ031', 'CZ041'],
+    position: { x: 210, y: 280 },
+    path: 'M100,200 L150,170 L200,160 L280,200 L290,250 L240,290 L200,330 L140,320 L80,280 L90,230 L100,200'
+  },
+  // Karlovarský kraj - Karlovy Vary region (westernmost)
+  {
+    id: 'CZ041',
+    name: 'Karlovarský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ032', 'CZ042'],
+    position: { x: 110, y: 160 },
+    path: 'M40,120 L80,100 L140,110 L170,130 L150,170 L100,200 L90,230 L50,200 L30,160 L40,120'
+  },
+  // Ústecký kraj - Ústí nad Labem region (north-west)
+  {
+    id: 'CZ042',
+    name: 'Ústecký kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ041', 'CZ051'],
+    position: { x: 230, y: 100 },
+    path: 'M140,110 L180,80 L250,60 L320,70 L340,100 L340,145 L300,160 L200,160 L150,170 L140,110'
+  },
+  // Liberecký kraj - Liberec region (north)
+  {
+    id: 'CZ051',
+    name: 'Liberecký kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ042', 'CZ052'],
+    position: { x: 400, y: 90 },
+    path: 'M320,70 L380,50 L440,60 L480,90 L470,130 L420,150 L340,145 L340,100 L320,70'
+  },
+  // Královéhradecký kraj - Hradec Králové region (north-east)
+  {
+    id: 'CZ052',
+    name: 'Královéhradecký kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ051', 'CZ053', 'CZ064'],
+    position: { x: 520, y: 120 },
+    path: 'M440,60 L500,50 L570,70 L600,110 L580,160 L530,180 L470,175 L470,130 L480,90 L440,60'
+  },
+  // Pardubický kraj - Pardubice region (east-central)
+  {
+    id: 'CZ053',
+    name: 'Pardubický kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ052', 'CZ063', 'CZ064'],
+    position: { x: 530, y: 220 },
+    path: 'M460,175 L470,175 L530,180 L580,160 L620,200 L600,250 L540,270 L470,260 L450,270 L470,220 L460,175'
+  },
+  // Vysočina - Highlands region (central-south)
+  {
+    id: 'CZ063',
+    name: 'Vysočina',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ020', 'CZ031', 'CZ053', 'CZ064'],
+    position: { x: 470, y: 320 },
+    path: 'M400,300 L450,270 L470,260 L540,270 L560,310 L540,360 L480,380 L420,340 L400,300'
+  },
+  // Jihomoravský kraj - South Moravia
+  {
+    id: 'CZ064',
+    name: 'Jihomoravský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ053', 'CZ063', 'CZ071', 'CZ072'],
+    position: { x: 610, y: 350 },
+    path: 'M540,270 L600,250 L660,280 L700,330 L690,390 L630,420 L560,400 L540,360 L560,310 L540,270'
+  },
+  // Olomoucký kraj - Olomouc region
+  {
+    id: 'CZ071',
+    name: 'Olomoucký kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ053', 'CZ064', 'CZ072', 'CZ080'],
+    position: { x: 650, y: 220 },
+    path: 'M580,160 L620,140 L680,150 L720,190 L710,240 L660,280 L600,250 L620,200 L580,160'
+  },
+  // Zlínský kraj - Zlín region (east)
+  {
+    id: 'CZ072',
+    name: 'Zlínský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ064', 'CZ071', 'CZ080'],
+    position: { x: 720, y: 320 },
+    path: 'M660,280 L710,240 L760,270 L780,330 L750,380 L690,390 L700,330 L660,280'
+  },
+  // Moravskoslezský kraj - Moravia-Silesia (easternmost)
+  {
+    id: 'CZ080',
+    name: 'Moravskoslezský kraj',
+    ownerId: null,
+    isCapital: false,
+    neighbors: ['CZ071', 'CZ072'],
+    position: { x: 750, y: 180 },
+    path: 'M680,150 L720,120 L780,130 L800,180 L780,240 L760,270 L710,240 L720,190 L680,150'
+  }
 ];
+
+// Pre-calculated distances between regions for player distribution
+// Using center positions for distance calculation
+export const getMaximallyDistantTerritories = (playerCount: number): string[] => {
+  const territories = initialTerritories;
+  
+  // Calculate distance between two territories
+  const distance = (t1: Territory, t2: Territory): number => {
+    const dx = t1.position.x - t2.position.x;
+    const dy = t1.position.y - t2.position.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+  
+  // For different player counts, we want to maximize minimum distance between starting positions
+  // Pre-selected optimal starting positions for each player count
+  const optimalStarts: Record<number, string[]> = {
+    2: ['CZ041', 'CZ080'], // Karlovarský (west) vs Moravskoslezský (east)
+    3: ['CZ041', 'CZ080', 'CZ031'], // Add Jihočeský (south)
+    4: ['CZ041', 'CZ080', 'CZ031', 'CZ052'], // Add Královéhradecký (north-east)
+  };
+  
+  if (optimalStarts[playerCount]) {
+    return optimalStarts[playerCount];
+  }
+  
+  // Fallback: greedy algorithm for other counts
+  const selected: Territory[] = [];
+  const available = [...territories];
+  
+  // Start with the westernmost territory
+  const first = available.reduce((a, b) => a.position.x < b.position.x ? a : b);
+  selected.push(first);
+  available.splice(available.indexOf(first), 1);
+  
+  // Greedily select territories that maximize minimum distance
+  while (selected.length < playerCount && available.length > 0) {
+    let bestTerritory: Territory | null = null;
+    let bestMinDistance = -1;
+    
+    for (const candidate of available) {
+      const minDist = Math.min(...selected.map(s => distance(s, candidate)));
+      if (minDist > bestMinDistance) {
+        bestMinDistance = minDist;
+        bestTerritory = candidate;
+      }
+    }
+    
+    if (bestTerritory) {
+      selected.push(bestTerritory);
+      available.splice(available.indexOf(bestTerritory), 1);
+    }
+  }
+  
+  return selected.map(t => t.id);
+};
