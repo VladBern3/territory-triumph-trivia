@@ -1,0 +1,50 @@
+export interface Player {
+  id: string;
+  name: string;
+  color: 'red' | 'blue' | 'green' | 'yellow';
+  territories: string[];
+  capitalId: string | null;
+  isEliminated: boolean;
+  score: number;
+}
+
+export interface Territory {
+  id: string;
+  name: string;
+  ownerId: string | null;
+  isCapital: boolean;
+  neighbors: string[];
+  position: { x: number; y: number };
+  path: string; // SVG path for the territory shape
+}
+
+export interface Question {
+  id: string;
+  type: 'numeric' | 'multiple_choice';
+  text: string;
+  correctAnswer: number | string;
+  options?: string[]; // For multiple choice
+  hint?: string;
+}
+
+export interface GameState {
+  phase: 'lobby' | 'settlement' | 'war' | 'capital_battle' | 'game_over';
+  players: Player[];
+  territories: Territory[];
+  currentQuestion: Question | null;
+  currentTurnPlayerId: string | null;
+  attackingPlayerId: string | null;
+  defendingPlayerId: string | null;
+  targetTerritoryId: string | null;
+  roundNumber: number;
+  capitalBattleRound: number; // 1, 2, or 3 for capital battles
+  winner: Player | null;
+}
+
+export interface Answer {
+  playerId: string;
+  answer: number | string;
+  timestamp: number;
+}
+
+export type GamePhase = GameState['phase'];
