@@ -57,7 +57,7 @@ export function GameBoard({
     <div className="min-h-screen parchment-texture p-4 space-y-4">
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="font-display text-3xl md:text-4xl gold-text mb-2">Conquiztador</h1>
+        <h1 className="font-display text-3xl md:text-4xl gold-text mb-2">Quiz Empire</h1>
         <p className="text-muted-foreground">
           {phase === 'settlement' && 'Фаза расселения — отвечайте на вопросы, чтобы захватить свободные земли'}
           {phase === 'war' && !isSelectingTarget && 'Фаза войны — атакуйте соседние территории'}
