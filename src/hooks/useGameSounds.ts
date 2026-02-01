@@ -1,29 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 
-const SUPABASE_URL = "https://amkfedsjcjdqgwbfwitt.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFta2ZlZHNqY2pkcWd3YmZ3aXR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5MDUwNjIsImV4cCI6MjA4NTQ4MTA2Mn0.pq8E9KuCFRnEoH4PJrjm7XK-Q45n_J-b_ijAvKTIPkw";
-
-// Sound prompts for ElevenLabs
-const SOUND_PROMPTS = {
-  gameStart: {
-    prompt: 'Epic medieval war horn signal, single long blast, battle horn fanfare, cinematic orchestral',
-    duration: 3,
-  },
-  peacefulCapture: {
-    prompt: 'Short triumphant trumpet fanfare, medieval herald announcement, tu-tu-ruu victory jingle',
-    duration: 2,
-  },
-  enemyCapture: {
-    prompt: 'Metallic sword clashing sound, medieval battle swords hitting, steel weapons clash',
-    duration: 2,
-  },
-  underAttack: {
-    prompt: 'Medieval war drums beating, urgent battle drums, army march drumroll warning',
-    duration: 3,
-  },
+// Free royalty-free sound effects URLs
+const SOUND_URLS = {
+  gameStart: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // War horn
+  peacefulCapture: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3', // Trumpet fanfare
+  enemyCapture: 'https://assets.mixkit.co/active_storage/sfx/2759/2759-preview.mp3', // Sword clash
+  underAttack: 'https://assets.mixkit.co/active_storage/sfx/2462/2462-preview.mp3', // War drums
 };
 
-type SoundKey = keyof typeof SOUND_PROMPTS;
+type SoundKey = keyof typeof SOUND_URLS;
 
 export function useGameSounds() {
   const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -31,69 +16,28 @@ export function useGameSounds() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
-  const generateSound = useCallback(async (prompt: string, duration: number): Promise<Blob | null> => {
-    try {
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/elevenlabs-sfx`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ prompt, duration }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Sound generation failed:', response.status, errorData);
-        return null;
-      }
-
-      return await response.blob();
-    } catch (error) {
-      console.error('Error generating sound:', error);
-      return null;
+  const preloadSound = useCallback((key: SoundKey) => {
+    if (!audioCache.current.has(key)) {
+      const audio = new Audio(SOUND_URLS[key]);
+      audio.preload = 'auto';
+      audio.volume = 0.5;
+      audioCache.current.set(key, audio);
     }
   }, []);
 
-  const playGeneratedSound = useCallback(async (prompt: string, duration: number, cacheKey?: string) => {
+  const playSound = useCallback((key: SoundKey) => {
     if (isMuted.current) return;
 
-    const key = cacheKey || prompt;
-    
-    // Check cache first
     let audio = audioCache.current.get(key);
     
     if (!audio) {
-      setIsLoading(true);
-      setCurrentlyPlaying(key);
-      
-      try {
-        const audioBlob = await generateSound(prompt, duration);
-        
-        if (!audioBlob) {
-          setIsLoading(false);
-          setCurrentlyPlaying(null);
-          return;
-        }
-        
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audio = new Audio(audioUrl);
-        audio.volume = 0.6;
-        audioCache.current.set(key, audio);
-      } catch (error) {
-        console.error('Error playing sound:', error);
-        setIsLoading(false);
-        setCurrentlyPlaying(null);
-        return;
-      }
+      audio = new Audio(SOUND_URLS[key]);
+      audio.volume = 0.5;
+      audioCache.current.set(key, audio);
     }
 
-    setIsLoading(false);
-    
+    setCurrentlyPlaying(key);
+
     // Reset and play
     audio.currentTime = 0;
     audio.play()
@@ -104,49 +48,51 @@ export function useGameSounds() {
         console.log('Sound play blocked:', err.message);
         setCurrentlyPlaying(null);
       });
-  }, [generateSound]);
+  }, []);
+
+  // For debug panel compatibility - plays any sound by key
+  const playGeneratedSound = useCallback(async (prompt: string, duration: number, cacheKey?: string) => {
+    // Map prompts to sound keys for the debug panel
+    const soundMap: Record<string, SoundKey> = {
+      'Epic medieval war horn signal, single long blast, battle horn fanfare, cinematic orchestral': 'gameStart',
+      'Short triumphant trumpet fanfare, medieval herald announcement, tu-tu-ruu victory jingle': 'peacefulCapture',
+      'Metallic sword clashing sound, medieval battle swords hitting, steel weapons clash': 'enemyCapture',
+      'Medieval war drums beating, urgent battle drums, army march drumroll warning': 'underAttack',
+    };
+
+    const soundKey = soundMap[prompt] || (cacheKey as SoundKey);
+    if (soundKey && SOUND_URLS[soundKey]) {
+      playSound(soundKey);
+    }
+  }, [playSound]);
 
   const playGameStartSound = useCallback(() => {
-    const config = SOUND_PROMPTS.gameStart;
-    playGeneratedSound(config.prompt, config.duration, 'gameStart');
-  }, [playGeneratedSound]);
+    playSound('gameStart');
+  }, [playSound]);
 
   const playPeacefulCaptureSound = useCallback(() => {
-    const config = SOUND_PROMPTS.peacefulCapture;
-    playGeneratedSound(config.prompt, config.duration, 'peacefulCapture');
-  }, [playGeneratedSound]);
+    playSound('peacefulCapture');
+  }, [playSound]);
 
   const playEnemyCaptureSound = useCallback(() => {
-    const config = SOUND_PROMPTS.enemyCapture;
-    playGeneratedSound(config.prompt, config.duration, 'enemyCapture');
-  }, [playGeneratedSound]);
+    playSound('enemyCapture');
+  }, [playSound]);
 
   const playUnderAttackSound = useCallback(() => {
-    const config = SOUND_PROMPTS.underAttack;
-    playGeneratedSound(config.prompt, config.duration, 'underAttack');
-  }, [playGeneratedSound]);
+    playSound('underAttack');
+  }, [playSound]);
 
   const setMuted = useCallback((muted: boolean) => {
     isMuted.current = muted;
   }, []);
 
-  // Preload all sounds (generate and cache them)
-  const preloadAll = useCallback(async () => {
-    console.log('Preloading game sounds...');
-    for (const [key, config] of Object.entries(SOUND_PROMPTS)) {
-      if (!audioCache.current.has(key)) {
-        const audioBlob = await generateSound(config.prompt, config.duration);
-        if (audioBlob) {
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-          audio.volume = 0.6;
-          audioCache.current.set(key, audio);
-          console.log(`Preloaded sound: ${key}`);
-        }
-      }
-    }
-    console.log('All sounds preloaded');
-  }, [generateSound]);
+  // Preload all sounds
+  const preloadAll = useCallback(() => {
+    Object.keys(SOUND_URLS).forEach(key => {
+      preloadSound(key as SoundKey);
+    });
+    console.log('All game sounds preloaded');
+  }, [preloadSound]);
 
   return {
     playGeneratedSound,
