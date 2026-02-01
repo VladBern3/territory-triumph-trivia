@@ -20,7 +20,7 @@ const MapDebug = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Назад
         </Button>
-        <h1 className="font-display text-xl">Дебаг карты (17 регионов)</h1>
+        <h1 className="font-display text-xl">Дебаг карты (18 регионов)</h1>
         {selectedTerritory && (
           <span className="text-sm text-muted-foreground">
             Выбрано: {selectedTerritory.name} ({selectedTerritory.id})
