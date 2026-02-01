@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Territory, Player, TerritoryAnimation } from '@/types/game';
 import { Crown } from 'lucide-react';
+import { TerritoryFlag } from './TerritoryFlag';
 
 interface CzechoslovakiaMapProps {
   territories: Territory[];
@@ -12,6 +13,7 @@ interface CzechoslovakiaMapProps {
   currentAnimation?: TerritoryAnimation | null;
   isMyTurn?: boolean; // Whether it's the local player's turn
   showUnavailableMask?: boolean; // Whether to show diagonal stripes on unavailable territories
+  gamePhase?: 'settlement' | 'war' | 'capital_battle' | string; // Current game phase
 }
 
 // Dynamic territory centers calculated from SVG path bounding boxes
@@ -42,12 +44,14 @@ export function CzechoslovakiaMap({
   currentAnimation,
   isMyTurn = true,
   showUnavailableMask = false,
+  gamePhase = 'settlement',
 }: CzechoslovakiaMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [animationProgress, setAnimationProgress] = useState<Record<string, number>>({});
-  const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null);
   const [territoryCenters, setTerritoryCenters] = useState<Record<string, TerritoryCenter>>({});
+  // Track territories that are being animated (for flag animation)
+  const [animatingFlags, setAnimatingFlags] = useState<Set<string>>(new Set());
 
   // Calculate territory centers from actual SVG path bounding boxes
   const calculateTerritoryCenters = useCallback(() => {
@@ -96,6 +100,10 @@ export function CzechoslovakiaMap({
     if (!currentAnimation) return;
 
     const { territoryId, duration, startTime } = currentAnimation;
+    
+    // Mark this territory as animating for flag
+    setAnimatingFlags(prev => new Set(prev).add(territoryId));
+    
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -107,6 +115,15 @@ export function CzechoslovakiaMap({
 
       if (progress < 1) {
         requestAnimationFrame(animate);
+      } else {
+        // Animation complete - remove from animating set after a delay
+        setTimeout(() => {
+          setAnimatingFlags(prev => {
+            const next = new Set(prev);
+            next.delete(territoryId);
+            return next;
+          });
+        }, 500);
       }
     };
 
@@ -187,15 +204,13 @@ export function CzechoslovakiaMap({
         }
       };
 
-      // Hover effects with attack indicator - only if it's my turn
+      // Hover effects - only if it's my turn
       path.onmouseenter = () => {
         if (isSelectable && selectableTerritories.length > 0 && isMyTurn) {
           path.style.filter = 'drop-shadow(0 0 8px rgba(255, 200, 50, 0.6)) brightness(1.1)';
-          setHoveredTerritory(territoryId);
         }
       };
       path.onmouseleave = () => {
-        setHoveredTerritory(null);
         if (isSelected) {
           path.style.filter = 'drop-shadow(0 0 12px hsl(38, 70%, 50%))';
         } else if (isHighlighted) {
@@ -207,7 +222,7 @@ export function CzechoslovakiaMap({
         }
       };
     });
-  }, [territories, players, selectedTerritoryId, selectableTerritories, highlightedTerritories, currentAnimation, animationProgress, onTerritoryClick, svgContent, isMyTurn, showUnavailableMask]);
+  }, [territories, players, selectedTerritoryId, selectableTerritories, highlightedTerritories, currentAnimation, animationProgress, onTerritoryClick, svgContent, isMyTurn, showUnavailableMask, gamePhase]);
 
   if (!svgContent) {
     return (
@@ -219,10 +234,11 @@ export function CzechoslovakiaMap({
 
   // Get capitals with their owners for rendering crowns
   const capitals = territories.filter(t => t.isCapital && t.ownerId);
-
-  // Get hovered territory position for attack indicator
-  const hoveredTerritoryData = hoveredTerritory ? territories.find(t => t.id === hoveredTerritory) : null;
-  const hoveredCenter = hoveredTerritory ? territoryCenters[hoveredTerritory] : null;
+  
+  // Get owned non-capital territories for flag rendering (settlement phase only)
+  const ownedNonCapitalTerritories = gamePhase === 'settlement' 
+    ? territories.filter(t => t.ownerId && !t.isCapital)
+    : [];
 
   return (
     <div 
@@ -275,68 +291,36 @@ export function CzechoslovakiaMap({
           <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
         </svg>
         
-        {/* Selection indicator arrow - 3D style for settlement phase */}
-        {hoveredCenter && selectableTerritories.length > 0 && selectableTerritories.includes(hoveredTerritory!) && (
-          <div
-            className="absolute pointer-events-none animate-bounce"
-            style={{
-              left: `${(hoveredCenter.x / 1499) * 100}%`,
-              top: `${(hoveredCenter.y / 717) * 100}%`,
-              transform: 'translate(-50%, -100%)',
-              marginTop: '-20px',
-            }}
-          >
-            {/* 3D Arrow indicator */}
-            <div className="relative flex flex-col items-center">
-              {/* "ВЫБРАТЬ" label */}
-              <span 
-                className="text-xs font-bold px-2 py-0.5 rounded mb-1 whitespace-nowrap"
-                style={{
-                  backgroundColor: 'hsl(var(--primary))',
-                  color: 'hsl(var(--primary-foreground))',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                }}
-              >
-                ВЫБРАТЬ
-              </span>
-              
-              {/* 3D Arrow */}
-              <svg 
-                width="40" 
-                height="50" 
-                viewBox="0 0 40 50" 
-                className="drop-shadow-lg"
-                style={{
-                  filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))',
-                }}
-              >
-                {/* Arrow back face (3D effect) */}
-                <polygon 
-                  points="20,50 5,20 15,20 15,0 25,0 25,20 35,20" 
-                  fill="hsl(142, 60%, 25%)"
-                />
-                {/* Arrow front face */}
-                <polygon 
-                  points="20,46 8,18 16,18 16,2 24,2 24,18 32,18" 
-                  fill="hsl(142, 70%, 40%)"
-                />
-                {/* Arrow highlight */}
-                <polygon 
-                  points="16,2 24,2 24,18 32,18 20,46" 
-                  fill="url(#arrowGradient)"
-                  opacity="0.4"
-                />
-                <defs>
-                  <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="white" stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="white" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-              </svg>
+        {/* Territory flags for owned non-capital territories (settlement phase) */}
+        {ownedNonCapitalTerritories.map(territory => {
+          const owner = players.find(p => p.id === territory.ownerId);
+          if (!owner) return null;
+          
+          const center = territoryCenters[territory.id];
+          if (!center) return null;
+          
+          const xPercent = (center.x / 1499) * 100;
+          const yPercent = (center.y / 717) * 100;
+          const isAnimating = animatingFlags.has(territory.id);
+          
+          return (
+            <div
+              key={`flag-${territory.id}`}
+              className="absolute pointer-events-none"
+              style={{
+                left: `${xPercent}%`,
+                top: `${yPercent}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <TerritoryFlag 
+                color={owner.color}
+                colorValue={playerColorValues[owner.color]}
+                isAnimating={isAnimating}
+              />
             </div>
-          </div>
-        )}
+          );
+        })}
         
         {/* Capital crowns overlay */}
         {capitals.map(capital => {

@@ -173,6 +173,7 @@ export function GameBoard({
           currentAnimation={currentAnimation}
           isMyTurn={canClick}
           showUnavailableMask={showUnavailableMask}
+          gamePhase={phase}
         />
       </div>
 
