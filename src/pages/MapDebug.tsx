@@ -4,20 +4,29 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { CzechoslovakiaMap } from '@/components/game/CzechoslovakiaMap';
+import { Player, Territory } from '@/types/game';
 
 interface TerritoryCenter {
   x: number;
   y: number;
 }
 
+// Mock players for visual testing
+const mockPlayers: Player[] = [
+  { id: 'p1', name: 'Игрок 1', color: 'red', territories: [], capitalId: null, isEliminated: false, score: 0 },
+  { id: 'p2', name: 'Игрок 2', color: 'blue', territories: [], capitalId: null, isEliminated: false, score: 0 },
+];
+
 const MapDebug = () => {
   const navigate = useNavigate();
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
-  const [territories] = useState(initialTerritories);
+  const [territories, setTerritories] = useState<Territory[]>(initialTerritories);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [calculatedCenters, setCalculatedCenters] = useState<Record<string, TerritoryCenter>>({});
   const [showCalculated, setShowCalculated] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [useGameMap, setUseGameMap] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const selectedTerritory = territories.find(t => t.id === selectedTerritoryId);
@@ -61,9 +70,9 @@ const MapDebug = () => {
     }
   }, [svgContent, calculateTerritoryCenters]);
 
-  // Apply styles to SVG paths
+  // Apply styles to SVG paths (only for simple debug view)
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || useGameMap) return;
 
     const paths = svgRef.current.querySelectorAll('path');
     
@@ -85,7 +94,7 @@ const MapDebug = () => {
         if (!isSelected) path.style.fill = 'hsl(38, 25%, 85%)';
       };
     });
-  }, [svgContent, selectedTerritoryId]);
+  }, [svgContent, selectedTerritoryId, useGameMap]);
 
   // Get displayed centers - either hardcoded or calculated
   const displayedCenters = showCalculated 
@@ -126,14 +135,23 @@ const MapDebug = () => {
         </Button>
         <h1 className="font-display text-xl">Дебаг карты (18 регионов)</h1>
         
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
           <Button 
-            variant={showCalculated ? "default" : "outline"} 
+            variant={useGameMap ? "default" : "outline"} 
             size="sm"
-            onClick={() => setShowCalculated(!showCalculated)}
+            onClick={() => setUseGameMap(!useGameMap)}
           >
-            {showCalculated ? "Показать hardcoded" : "Показать getBBox"}
+            {useGameMap ? "Простая карта" : "Как в игре"}
           </Button>
+          {!useGameMap && (
+            <Button 
+              variant={showCalculated ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setShowCalculated(!showCalculated)}
+            >
+              {showCalculated ? "Показать hardcoded" : "Показать getBBox"}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={copyAllCoordinates}>
             <Copy className="w-4 h-4 mr-2" />
             Копировать все
@@ -144,7 +162,7 @@ const MapDebug = () => {
       {/* Selected territory info */}
       {selectedTerritory && (
         <div className="px-4 pb-2">
-          <div className="bg-card/90 backdrop-blur-sm rounded-lg px-4 py-2 inline-flex items-center gap-4">
+          <div className="bg-card/90 backdrop-blur-sm rounded-lg px-4 py-2 inline-flex items-center gap-4 flex-wrap">
             <span className="font-semibold">{selectedTerritory.name} ({selectedTerritory.id})</span>
             <span className="text-sm text-muted-foreground">
               Hardcoded: x={selectedTerritory.position.x}, y={selectedTerritory.position.y}
@@ -161,97 +179,171 @@ const MapDebug = () => {
         </div>
       )}
 
-      {/* Map with ID labels */}
+      {/* Map */}
       <div className="flex-1 p-4">
-        <div 
-          className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden" 
-          style={{ 
-            perspective: '1000px',
-            backgroundColor: 'hsl(220, 60%, 20%)' 
-          }}
-        >
-          <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
-            {svgContent ? (
-              <svg
-                ref={svgRef}
-                viewBox="0 0 1499 717"
-                className="w-full h-full"
-                fill="none"
-                preserveAspectRatio="xMidYMid meet"
-                style={{ 
-                  filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))',
-                }}
-              >
-                <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
-              </svg>
-            ) : (
-              <div className="flex items-center justify-center h-full text-white">
-                Загрузка карты...
-              </div>
-            )}
+        {useGameMap ? (
+          /* Game-like map using CzechoslovakiaMap component */
+          <div className="relative w-full h-full">
+            <CzechoslovakiaMap
+              territories={territories}
+              players={mockPlayers}
+              selectedTerritoryId={selectedTerritoryId}
+              onTerritoryClick={setSelectedTerritoryId}
+              selectableTerritories={territories.map(t => t.id)}
+              isMyTurn={true}
+              gamePhase="settlement"
+            />
             
-            {/* Region markers at displayed center positions */}
-            {Object.entries(displayedCenters).map(([territoryId, center]) => {
-              const isSelected = selectedTerritoryId === territoryId;
-              
-              return (
-                <div
-                  key={territoryId}
-                  className="absolute pointer-events-auto cursor-pointer group"
-                  style={{
-                    left: `${(center.x / 1499) * 100}%`,
-                    top: `${(center.y / 717) * 100}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                  onClick={() => setSelectedTerritoryId(territoryId)}
-                >
-                  {/* Center dot */}
-                  <div 
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor: showCalculated ? 'hsl(217, 91%, 60%)' : 'hsl(0, 84%, 60%)',
-                      boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-                    }}
-                  />
+            {/* Overlay with markers showing center positions */}
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
+                {Object.entries(displayedCenters).map(([territoryId, center]) => {
+                  const isSelected = selectedTerritoryId === territoryId;
                   
-                  {/* Label */}
-                  <div 
-                    className="text-xs font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg flex items-center gap-1"
+                  return (
+                    <div
+                      key={territoryId}
+                      className="absolute pointer-events-auto cursor-pointer group"
+                      style={{
+                        left: `${(center.x / 1499) * 100}%`,
+                        top: `${(center.y / 717) * 100}%`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                      onClick={() => setSelectedTerritoryId(territoryId)}
+                    >
+                      {/* Center dot */}
+                      <div 
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
+                        style={{
+                          backgroundColor: isSelected ? 'hsl(45, 93%, 47%)' : 'hsl(0, 84%, 60%)',
+                          boxShadow: '0 0 6px rgba(0,0,0,0.7)',
+                        }}
+                      />
+                      
+                      {/* Label */}
+                      <div 
+                        className="absolute left-1/2 -translate-x-1/2 -top-6 text-xs font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg flex items-center gap-1"
+                        style={{
+                          backgroundColor: isSelected 
+                            ? 'hsl(45, 93%, 47%)' 
+                            : 'rgba(0, 0, 0, 0.85)',
+                          color: isSelected ? '#1a1a1a' : 'white',
+                          textShadow: isSelected ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                        }}
+                      >
+                        <span>{territoryId.replace('region-', '')}</span>
+                        <button
+                          className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copySingleCoordinate(territoryId);
+                          }}
+                        >
+                          {copiedId === territoryId ? (
+                            <Check className="w-3 h-3 text-green-400" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Simple debug map */
+          <div 
+            className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden" 
+            style={{ 
+              perspective: '1000px',
+              backgroundColor: 'hsl(220, 60%, 20%)' 
+            }}
+          >
+            <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
+              {svgContent ? (
+                <svg
+                  ref={svgRef}
+                  viewBox="0 0 1499 717"
+                  className="w-full h-full"
+                  fill="none"
+                  preserveAspectRatio="xMidYMid meet"
+                  style={{ 
+                    filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))',
+                  }}
+                >
+                  <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
+                </svg>
+              ) : (
+                <div className="flex items-center justify-center h-full text-white">
+                  Загрузка карты...
+                </div>
+              )}
+              
+              {/* Region markers at displayed center positions */}
+              {Object.entries(displayedCenters).map(([territoryId, center]) => {
+                const isSelected = selectedTerritoryId === territoryId;
+                
+                return (
+                  <div
+                    key={territoryId}
+                    className="absolute pointer-events-auto cursor-pointer group"
                     style={{
-                      backgroundColor: isSelected 
-                        ? 'hsl(45, 93%, 47%)' 
-                        : 'rgba(0, 0, 0, 0.85)',
-                      color: isSelected ? '#1a1a1a' : 'white',
-                      textShadow: isSelected ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                      left: `${(center.x / 1499) * 100}%`,
+                      top: `${(center.y / 717) * 100}%`,
+                      transform: 'translate(-50%, -50%)',
                     }}
+                    onClick={() => setSelectedTerritoryId(territoryId)}
                   >
-                    <span>{territoryId.replace('region-', '')}</span>
-                    <button
-                      className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copySingleCoordinate(territoryId);
+                    {/* Center dot */}
+                    <div 
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: showCalculated ? 'hsl(217, 91%, 60%)' : 'hsl(0, 84%, 60%)',
+                        boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                      }}
+                    />
+                    
+                    {/* Label */}
+                    <div 
+                      className="text-xs font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg flex items-center gap-1"
+                      style={{
+                        backgroundColor: isSelected 
+                          ? 'hsl(45, 93%, 47%)' 
+                          : 'rgba(0, 0, 0, 0.85)',
+                        color: isSelected ? '#1a1a1a' : 'white',
+                        textShadow: isSelected ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
                       }}
                     >
-                      {copiedId === territoryId ? (
-                        <Check className="w-3 h-3 text-green-400" />
-                      ) : (
-                        <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {/* Coordinates tooltip on hover */}
-                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    <div className="bg-black/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                      x: {center.x}, y: {center.y}
+                      <span>{territoryId.replace('region-', '')}</span>
+                      <button
+                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copySingleCoordinate(territoryId);
+                        }}
+                      >
+                        {copiedId === territoryId ? (
+                          <Check className="w-3 h-3 text-green-400" />
+                        ) : (
+                          <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
+                        )}
+                      </button>
+                    </div>
+                    
+                    {/* Coordinates tooltip on hover */}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      <div className="bg-black/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                        x: {center.x}, y: {center.y}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Coordinates table */}
