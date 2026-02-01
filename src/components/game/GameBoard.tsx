@@ -15,6 +15,7 @@ interface GameBoardProps {
   selectableSettlementTerritories: string[];
   waitingForAnswers: boolean;
   collectedAnswers?: Answer[];
+  questionStartTime?: number;
 }
 
 export function GameBoard({
@@ -26,6 +27,7 @@ export function GameBoard({
   selectableSettlementTerritories,
   waitingForAnswers,
   collectedAnswers = [],
+  questionStartTime = Date.now(),
 }: GameBoardProps) {
   const {
     phase,
@@ -201,6 +203,7 @@ export function GameBoard({
         currentPlayerId={currentTurnPlayerId}
         players={players}
         collectedAnswers={collectedAnswers}
+        questionStartTime={questionStartTime}
       />
     </div>
   );

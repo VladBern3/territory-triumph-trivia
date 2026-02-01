@@ -15,6 +15,7 @@ interface QuestionModalProps {
   currentPlayerId?: string | null;
   players: Player[];
   collectedAnswers?: Answer[];
+  questionStartTime?: number;
 }
 
 const playerBorderClasses: Record<string, string> = {
@@ -35,6 +36,7 @@ export function QuestionModal({
   currentPlayerId,
   players,
   collectedAnswers = [],
+  questionStartTime,
 }: QuestionModalProps) {
   if (!question) return null;
 
@@ -67,6 +69,7 @@ export function QuestionModal({
             collectedAnswers={collectedAnswers}
             players={players}
             expectedAnswerCount={expectedAnswerCount}
+            questionStartTime={questionStartTime}
           />
         ) : (
           // War phase - show battle info and question
@@ -114,6 +117,7 @@ export function QuestionModal({
               collectedAnswers={collectedAnswers}
               players={players}
               expectedAnswerCount={expectedAnswerCount}
+              questionStartTime={questionStartTime}
             />
           </div>
         )}

@@ -42,7 +42,10 @@ export function useGameState(questionProviders?: QuestionProviders) {
 
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isShowingResults, setIsShowingResults] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState<number>(0);
   const animationQueueRef = useRef<{ territoryId: string; playerId: string; isCapital: boolean }[]>([]);
+  const roundTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const QUESTION_TIME_LIMIT = 10; // seconds
 
   // Get unowned territories
   const neutralTerritories = useMemo(() => 
@@ -122,8 +125,95 @@ export function useGameState(questionProviders?: QuestionProviders) {
       currentTurnPlayerId: prev.players[0].id,
       roundNumber: 1,
     }));
+    // Round timer will be started by the effect that watches currentQuestion
     
   }, [animateCapture, getNumericQuestion]);
+
+  // Start a timer that force-completes the round when time expires
+  const startRoundTimer = useCallback((question: Question | null) => {
+    // Clear any existing timer
+    if (roundTimerRef.current) {
+      clearTimeout(roundTimerRef.current);
+      roundTimerRef.current = null;
+    }
+    
+    if (!question) return;
+    
+    roundTimerRef.current = setTimeout(() => {
+      console.log('Round timer expired, force completing round...');
+      forceCompleteRound();
+    }, (QUESTION_TIME_LIMIT + 1) * 1000); // +1 second buffer for network/UI
+  }, []);
+
+  // Force complete the round - fill in missing answers as null
+  const forceCompleteRound = useCallback(() => {
+    setAnswers(prevAnswers => {
+      setGameState(prevState => {
+        const { phase, currentQuestion, players, attackingPlayerId, defendingPlayerId } = prevState;
+        
+        if (!currentQuestion) return prevState;
+        
+        const activePlayers = players.filter(p => !p.isEliminated);
+        let expectedPlayers: string[] = [];
+        
+        if (phase === 'settlement') {
+          expectedPlayers = activePlayers.map(p => p.id);
+        } else if (phase === 'war' || phase === 'capital_battle') {
+          if (attackingPlayerId) expectedPlayers.push(attackingPlayerId);
+          if (defendingPlayerId) expectedPlayers.push(defendingPlayerId);
+        }
+        
+        // Find who didn't answer
+        const answeredPlayerIds = new Set(prevAnswers.map(a => a.playerId));
+        const missingAnswers: Answer[] = expectedPlayers
+          .filter(id => !answeredPlayerIds.has(id))
+          .map(playerId => ({
+            playerId,
+            answer: null,
+            timestamp: Date.now(),
+          }));
+        
+        if (missingAnswers.length > 0) {
+          console.log('Adding missing answers for players:', missingAnswers.map(a => a.playerId));
+          // Return combined answers - this will trigger the processing effect
+          return prevState; // State unchanged, but we update answers below
+        }
+        
+        return prevState;
+      });
+      
+      // Get current state to add missing answers
+      const { phase, currentQuestion, players, attackingPlayerId, defendingPlayerId } = gameState;
+      
+      if (!currentQuestion) return prevAnswers;
+      
+      const activePlayers = players.filter(p => !p.isEliminated);
+      let expectedPlayers: string[] = [];
+      
+      if (phase === 'settlement') {
+        expectedPlayers = activePlayers.map(p => p.id);
+      } else if (phase === 'war' || phase === 'capital_battle') {
+        if (attackingPlayerId) expectedPlayers.push(attackingPlayerId);
+        if (defendingPlayerId) expectedPlayers.push(defendingPlayerId);
+      }
+      
+      const answeredPlayerIds = new Set(prevAnswers.map(a => a.playerId));
+      const missingAnswers: Answer[] = expectedPlayers
+        .filter(id => !answeredPlayerIds.has(id))
+        .map(playerId => ({
+          playerId,
+          answer: null,
+          timestamp: Date.now(),
+        }));
+      
+      if (missingAnswers.length > 0) {
+        console.log('Force adding missing answers:', missingAnswers);
+        return [...prevAnswers, ...missingAnswers];
+      }
+      
+      return prevAnswers;
+    });
+  }, [gameState]);
 
   // Initialize game with players - auto-assign starting territories maximally apart
   const startGame = useCallback((playerData: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>[]) => {
@@ -179,6 +269,21 @@ export function useGameState(questionProviders?: QuestionProviders) {
     });
   }, []);
 
+  // Effect to start round timer when question changes
+  useEffect(() => {
+    if (gameState.currentQuestion && !isShowingResults) {
+      setQuestionStartTime(Date.now());
+      startRoundTimer(gameState.currentQuestion);
+    }
+    
+    return () => {
+      if (roundTimerRef.current) {
+        clearTimeout(roundTimerRef.current);
+        roundTimerRef.current = null;
+      }
+    };
+  }, [gameState.currentQuestion?.id, isShowingResults, startRoundTimer]);
+
   // Effect to process answers when all players have responded
   useEffect(() => {
     const { phase, currentQuestion, players } = gameState;
@@ -190,6 +295,11 @@ export function useGameState(questionProviders?: QuestionProviders) {
     
     if (phase === 'settlement' && answers.length >= activePlayers.length) {
       console.log('All answers collected, showing results...');
+      // Clear round timer since all answered
+      if (roundTimerRef.current) {
+        clearTimeout(roundTimerRef.current);
+        roundTimerRef.current = null;
+      }
       setIsShowingResults(true);
       
       // Show results for 3 seconds, then process
@@ -199,6 +309,11 @@ export function useGameState(questionProviders?: QuestionProviders) {
       }, 3000);
     } else if ((phase === 'war' || phase === 'capital_battle') && answers.length >= 2) {
       console.log('Processing war answers...');
+      // Clear round timer
+      if (roundTimerRef.current) {
+        clearTimeout(roundTimerRef.current);
+        roundTimerRef.current = null;
+      }
       processWarAnswers(answers, currentQuestion);
     }
   }, [answers, gameState.phase, gameState.currentQuestion, gameState.players, isShowingResults]);
@@ -209,7 +324,13 @@ export function useGameState(questionProviders?: QuestionProviders) {
     console.log('Correct answer:', correctAnswer);
     
     // Sort by distance to correct answer, then by timestamp (closer = better)
+    // null answers go to the end
     const sorted = [...submittedAnswers].sort((a, b) => {
+      // null answers go last
+      if (a.answer === null && b.answer !== null) return 1;
+      if (a.answer !== null && b.answer === null) return -1;
+      if (a.answer === null && b.answer === null) return a.timestamp - b.timestamp;
+      
       const distA = Math.abs(Number(a.answer) - correctAnswer);
       const distB = Math.abs(Number(b.answer) - correctAnswer);
       if (distA !== distB) return distA - distB;
@@ -505,5 +626,6 @@ export function useGameState(questionProviders?: QuestionProviders) {
     neutralTerritories,
     answers,
     isShowingResults,
+    questionStartTime,
   };
 }
