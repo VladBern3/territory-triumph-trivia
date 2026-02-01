@@ -162,7 +162,7 @@ export function CzechoslovakiaMap({
     <div className="relative w-full h-full flex items-center justify-center">
       <svg
         ref={svgRef}
-        viewBox="0 0 1479 708"
+        viewBox="0 0 1494 712"
         className="w-full h-full max-w-6xl"
         preserveAspectRatio="xMidYMid meet"
         style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))' }}
