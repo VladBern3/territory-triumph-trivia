@@ -70,14 +70,18 @@ export function GameBoard({
   // Determine which territories are selectable (for click handling)
   // During settlement: only neutral neighbor territories are selectable
   // During war: only attackable territories are selectable
+  // Show selectable territories to ALL players so everyone sees what's available
   const selectableTerritories = isSelectingSettlementTerritory 
-    ? (isMyTurn ? neighborSettlementTerritories : [])
+    ? neighborSettlementTerritories
     : isSelectingWarTarget 
-      ? (isMyTurn ? attackableTerritories : [])
+      ? attackableTerritories
       : [];
   
-  // Show unavailable mask only during selection phases and when it's my turn
-  const showUnavailableMask = isMyTurn && (isSelectingSettlementTerritory || isSelectingWarTarget);
+  // Only allow clicking if it's my turn
+  const canClick = isMyTurn;
+  
+  // Show unavailable mask to ALL players during selection phases
+  const showUnavailableMask = isSelectingSettlementTerritory || isSelectingWarTarget;
 
   // Determine click handler
   const handleTerritoryClick = isSelectingSettlementTerritory
@@ -148,7 +152,7 @@ export function GameBoard({
           selectableTerritories={selectableTerritories}
           highlightedTerritories={isBattleActive && targetTerritoryId ? [targetTerritoryId] : []}
           currentAnimation={currentAnimation}
-          isMyTurn={isMyTurn}
+          isMyTurn={canClick}
           showUnavailableMask={showUnavailableMask}
         />
       </div>
