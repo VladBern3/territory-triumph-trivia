@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { MultiplayerLobby } from '@/components/game/MultiplayerLobby';
 import { GameBoard } from '@/components/game/GameBoard';
 import { GameOverScreen } from '@/components/game/GameOverScreen';
+import { SoundDebugPanel } from '@/components/game/SoundDebugPanel';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useGameState } from '@/hooks/useGameState';
 import { useBotPlayer } from '@/hooks/useBotPlayer';
@@ -98,9 +99,11 @@ const Index = () => {
       lastAnimationIdRef.current = animation.territoryId;
       
       if (animation.isCapital) {
-        gameSounds.playCapitalCaptureSound();
+        // Capital capture - uses enemy capture sound (sword clashing)
+        gameSounds.playEnemyCaptureSound();
       } else {
-        gameSounds.playCaptureSound();
+        // Regular territory capture
+        gameSounds.playPeacefulCaptureSound();
       }
     }
   }, [gameState.currentAnimation, gameSounds]);
@@ -260,28 +263,50 @@ const Index = () => {
   // Waiting room / Lobby - check if not in active game or multiplayer waiting
   const isWaitingPhase = phase === 'lobby' || (mpGameState.phase as string) === 'waiting';
   
+  // Handler for debug panel sound playback
+  const handleDebugPlaySound = useCallback(async (prompt: string, duration: number) => {
+    await gameSounds.playGeneratedSound(prompt, duration);
+  }, [gameSounds]);
+
+  // Render debug panel on all screens
+  const debugPanel = (
+    <SoundDebugPanel
+      onPlaySound={handleDebugPlaySound}
+      isLoading={gameSounds.isLoading}
+      currentlyPlaying={gameSounds.currentlyPlaying}
+    />
+  );
+
   if (!isSinglePlayer && (!isInSession || isWaitingPhase)) {
     return (
-      <MultiplayerLobby
-        sessionCode={sessionCode}
-        players={players}
-        localPlayerId={localPlayerId}
-        isHost={isHost}
-        isConnected={isConnected}
-        error={error}
-        onCreateSession={handleCreateSession}
-        onJoinSession={handleJoinSession}
-        onStartGame={handleStartGame}
-        onLeaveSession={leaveSession}
-        onSelectRole={handleSelectRole}
-        onStartSinglePlayer={handleStartSinglePlayer}
-      />
+      <>
+        <MultiplayerLobby
+          sessionCode={sessionCode}
+          players={players}
+          localPlayerId={localPlayerId}
+          isHost={isHost}
+          isConnected={isConnected}
+          error={error}
+          onCreateSession={handleCreateSession}
+          onJoinSession={handleJoinSession}
+          onStartGame={handleStartGame}
+          onLeaveSession={leaveSession}
+          onSelectRole={handleSelectRole}
+          onStartSinglePlayer={handleStartSinglePlayer}
+        />
+        {debugPanel}
+      </>
     );
   }
 
   // Game over phase
   if (phase === 'game_over' && winner) {
-    return <GameOverScreen winner={winner} onPlayAgain={handleReset} />;
+    return (
+      <>
+        <GameOverScreen winner={winner} onPlayAgain={handleReset} />
+        {debugPanel}
+      </>
+    );
   }
 
   // Get the local human player ID
@@ -289,18 +314,21 @@ const Index = () => {
 
   // Active game phases
   return (
-    <GameBoard
-      gameState={gameState}
-      onSubmitAnswer={handleSubmitAnswer}
-      onSelectTarget={handleSelectTarget}
-      onSelectSettlementTerritory={handleSelectSettlementTerritory}
-      attackableTerritories={localGame.getAttackableTerritories()}
-      selectableSettlementTerritories={getSelectableSettlementTerritories()}
-      waitingForAnswers={localGame.answers.length > 0}
-      collectedAnswers={localGame.answers}
-      questionStartTime={localGame.questionStartTime}
-      localPlayerId={humanPlayerId}
-    />
+    <>
+      <GameBoard
+        gameState={gameState}
+        onSubmitAnswer={handleSubmitAnswer}
+        onSelectTarget={handleSelectTarget}
+        onSelectSettlementTerritory={handleSelectSettlementTerritory}
+        attackableTerritories={localGame.getAttackableTerritories()}
+        selectableSettlementTerritories={getSelectableSettlementTerritories()}
+        waitingForAnswers={localGame.answers.length > 0}
+        collectedAnswers={localGame.answers}
+        questionStartTime={localGame.questionStartTime}
+        localPlayerId={humanPlayerId}
+      />
+      {debugPanel}
+    </>
   );
 };
 
