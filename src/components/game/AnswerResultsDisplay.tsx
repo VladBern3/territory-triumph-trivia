@@ -188,16 +188,16 @@ export function AnswerResultsDisplay({
         })}
       </div>
 
-      {/* Correct answer - appears 1 second after last player answer */}
-      <div className={cn(
-        "flex justify-center transition-all duration-700",
-        showCorrectAnswer 
-          ? "opacity-100 translate-y-0 scale-100" 
-          : "opacity-0 translate-y-8 scale-90 pointer-events-none h-0"
-      )}>
+      {/* Correct answer - label always visible, value appears 1 second after last player answer */}
+      <div className="flex justify-center">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Правильный ответ:</span>
-          <div className="relative">
+          <div className={cn(
+            "relative transition-all duration-700",
+            showCorrectAnswer 
+              ? "opacity-100 translate-y-0 scale-100" 
+              : "opacity-0 translate-y-4 scale-90"
+          )}>
             {/* Glow effect */}
             <div className="absolute inset-0 bg-green-500/50 blur-lg rounded-lg animate-pulse" />
             <div className="relative bg-gradient-to-br from-green-600 to-green-700 text-white px-4 py-2 rounded-lg font-display text-xl font-bold shadow-lg border border-green-400/50">
