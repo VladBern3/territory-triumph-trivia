@@ -1,4 +1,5 @@
 import { GameState, Answer, SettlementSelection } from '@/types/game';
+import { CzechoslovakiaMap } from './CzechoslovakiaMap';
 import { PlayerPanel } from './PlayerPanel';
 import { QuestionModal } from './QuestionModal';
 import { BattleInfo } from './BattleInfo';
@@ -127,11 +128,17 @@ export function GameBoard({
         </div>
       )}
 
-      {/* Full-screen Map - placeholder until new map is added */}
+      {/* Full-screen Map */}
       <div className="flex-1 flex items-center justify-center p-4 pt-16 pb-24">
-        <div className="w-full h-full max-w-6xl flex items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-lg">
-          <p className="text-muted-foreground">Карта не загружена</p>
-        </div>
+        <CzechoslovakiaMap
+          territories={territories}
+          players={players}
+          selectedTerritoryId={targetTerritoryId}
+          onTerritoryClick={handleTerritoryClick}
+          selectableTerritories={selectableTerritories}
+          highlightedTerritories={isBattleActive && targetTerritoryId ? [targetTerritoryId] : []}
+          currentAnimation={currentAnimation}
+        />
       </div>
 
       {/* Settlement Territory Selection Prompt */}
