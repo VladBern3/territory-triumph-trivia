@@ -101,13 +101,16 @@ const MapDebug = () => {
         )}
       </div>
 
-      {/* Map with ID labels */}
+      {/* Map with ID labels - same 3D style as game */}
       <div className="flex-1 p-4">
         <div 
           className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden" 
-          style={{ backgroundColor: 'hsl(220, 60%, 20%)' }}
+          style={{ 
+            perspective: '1000px',
+            backgroundColor: 'hsl(220, 60%, 20%)' 
+          }}
         >
-          <div className="relative w-full h-full max-w-6xl">
+          <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
             {svgContent ? (
               <svg
                 ref={svgRef}
@@ -115,6 +118,9 @@ const MapDebug = () => {
                 className="w-full h-full"
                 fill="none"
                 preserveAspectRatio="xMidYMid meet"
+                style={{ 
+                  filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))',
+                }}
               >
                 <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
               </svg>
@@ -136,13 +142,13 @@ const MapDebug = () => {
                 }}
               >
                 <span 
-                  className="text-xs font-bold px-1.5 py-0.5 rounded whitespace-nowrap"
+                  className="text-sm font-bold px-2 py-1 rounded whitespace-nowrap shadow-lg"
                   style={{
                     backgroundColor: selectedTerritoryId === territoryId 
                       ? 'hsl(0, 84%, 50%)' 
-                      : 'rgba(0, 0, 0, 0.7)',
+                      : 'rgba(0, 0, 0, 0.8)',
                     color: 'white',
-                    fontSize: '10px',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                   }}
                 >
                   {territoryId.replace('region-', '')}
