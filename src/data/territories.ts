@@ -6,11 +6,11 @@ import { Territory } from "@/types/game";
 
 // Approximate center positions calculated from path bounding boxes
 const regionCenters: Record<string, { x: number; y: number }> = {
-  "region-1": { x: 126, y: 204 },
+  "region-1": { x: 68, y: 194 },
   "region-2": { x: 161, y: 315 },
   "region-3": { x: 322, y: 426 },
   "region-4": { x: 363, y: 233 },
-  "region-5": { x: 280, y: 120 },
+  "region-5": { x: 199, y: 129 },
   "region-6": { x: 415, y: 66 },
   "region-7": { x: 553, y: 157 },
   "region-8": { x: 591, y: 265 },
@@ -20,11 +20,12 @@ const regionCenters: Record<string, { x: number; y: number }> = {
   "region-12": { x: 840, y: 271 },
   "region-13": { x: 812, y: 397 },
   "region-14": { x: 825, y: 527 },
-  "region-15": { x: 1020, y: 400 },
+  "region-15": { x: 1016, y: 340 },
   "region-16": { x: 1320, y: 396 },
-  "region-17": { x: 1056, y: 518 },
-  "region-18": { x: 744, y: 565 },
+  "region-17": { x: 1082, y: 449 },
+  "region-18": { x: 747, y: 513 },
 };
+
 // Neighbor relationships based on SVG adjacencies
 const regionNeighbors: Record<string, string[]> = {
   "region-1": ["region-2", "region-5"],
