@@ -6,6 +6,7 @@ import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useGameState } from '@/hooks/useGameState';
 import { useBotPlayer } from '@/hooks/useBotPlayer';
 import { useQuestions } from '@/hooks/useQuestions';
+import { useGameSounds } from '@/hooks/useGameSounds';
 import { Player, Answer } from '@/types/game';
 
 const Index = () => {
@@ -16,8 +17,10 @@ const Index = () => {
     getRandomChoiceQuestion: questions.getRandomChoiceQuestion,
   });
   const botPlayer = useBotPlayer();
+  const gameSounds = useGameSounds();
   const [isSinglePlayer, setIsSinglePlayer] = useState(false);
   const humanPlayerIdRef = useRef<string | null>(null);
+  const lastAnimationIdRef = useRef<string | null>(null);
   
   const {
     sessionCode,
@@ -82,6 +85,25 @@ const Index = () => {
     setIsSinglePlayer(true);
     localGame.startGame([humanPlayer, ...bots]);
   }, [botPlayer, localGame, questions]);
+
+  // Preload sounds when component mounts
+  useEffect(() => {
+    gameSounds.preloadAll();
+  }, [gameSounds]);
+
+  // Play capture sound when animation starts
+  useEffect(() => {
+    const animation = gameState.currentAnimation;
+    if (animation && animation.territoryId !== lastAnimationIdRef.current) {
+      lastAnimationIdRef.current = animation.territoryId;
+      
+      if (animation.isCapital) {
+        gameSounds.playCapitalCaptureSound();
+      } else {
+        gameSounds.playCaptureSound();
+      }
+    }
+  }, [gameState.currentAnimation, gameSounds]);
 
   // Sync local game state changes to multiplayer session
   useEffect(() => {
