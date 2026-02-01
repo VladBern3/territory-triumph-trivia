@@ -6,24 +6,24 @@ import { Territory } from "@/types/game";
 
 // Approximate center positions calculated from path bounding boxes
 const regionCenters: Record<string, { x: number; y: number }> = {
-  "region-1": { x: 90, y: 190 }, // Top-left (path 1)
-  "region-2": { x: 180, y: 300 }, // Left-center (path 2)
-  "region-3": { x: 380, y: 420 }, // Center-left lower (path 3)
-  "region-4": { x: 320, y: 250 }, // Center-left upper (path 4)
-  "region-5": { x: 280, y: 120 }, // Top center-left (path 5)
-  "region-6": { x: 420, y: 80 }, // Top center (path 6)
-  "region-7": { x: 560, y: 140 }, // Top right of center (path 7)
-  "region-8": { x: 620, y: 240 }, // Upper center-right (path 8)
-  "region-9": { x: 520, y: 350 }, // Center (path 9)
-  "region-10": { x: 700, y: 460 }, // Right lower (path 10)
-  "region-11": { x: 700, y: 320 }, // Right center (path 11)
-  "region-12": { x: 780, y: 220 }, // Right upper (path 12)
-  "region-13": { x: 820, y: 430 }, // Far right lower (path 13)
-  "region-14": { x: 880, y: 620 }, // Bottom right (path 14)
-  "region-15": { x: 1020, y: 400 }, // Far right (path 15)
-  "region-16": { x: 1250, y: 360 }, // Far east upper (path 16)
-  "region-17": { x: 1050, y: 550 }, // Far east lower (path 17)
-  "region-18": { x: 680, y: 540 }, // Bottom center (path 18)
+  "region-1": { x: 126, y: 204 },
+  "region-2": { x: 161, y: 315 },
+  "region-3": { x: 322, y: 426 },
+  "region-4": { x: 363, y: 233 },
+  "region-5": { x: 280, y: 120 },
+  "region-6": { x: 438, y: 88 },
+  "region-7": { x: 553, y: 157 },
+  "region-8": { x: 591, y: 265 },
+  "region-9": { x: 515, y: 355 },
+  "region-10": { x: 657, y: 427 },
+  "region-11": { x: 734, y: 314 },
+  "region-12": { x: 840, y: 271 },
+  "region-13": { x: 812, y: 397 },
+  "region-14": { x: 825, y: 527 },
+  "region-15": { x: 1020, y: 400 },
+  "region-16": { x: 1320, y: 396 },
+  "region-17": { x: 1025, y: 584 },
+  "region-18": { x: 747, y: 614 },
 };
 
 // Neighbor relationships based on SVG adjacencies
