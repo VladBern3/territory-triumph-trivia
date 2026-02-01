@@ -179,15 +179,26 @@ const Index = () => {
   }, [isSinglePlayer, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.attackingPlayerId, localGame]);
 
   // Auto-select settlement territory for bot's turn
+  const botSelectionInProgressRef = useRef(false);
+  
   useEffect(() => {
     if (!isSinglePlayer) return;
     
     const { phase: currentPhase, currentTurnPlayerId, isSelectingSettlementTerritory } = localGame.gameState;
     
+    // Reset ref when not in selection mode
+    if (!isSelectingSettlementTerritory) {
+      botSelectionInProgressRef.current = false;
+      return;
+    }
+    
     if (currentPhase === 'settlement' && isSelectingSettlementTerritory && currentTurnPlayerId) {
       const currentPlayer = localGame.gameState.players.find(p => p.id === currentTurnPlayerId);
       
-      if (currentPlayer?.isBot) {
+      if (currentPlayer?.isBot && !botSelectionInProgressRef.current) {
+        // Mark that bot selection is in progress to prevent duplicate triggers
+        botSelectionInProgressRef.current = true;
+        
         // Bot selects a random neutral territory after a short delay
         const neutral = localGame.neutralTerritories;
         if (neutral.length > 0) {
@@ -195,8 +206,12 @@ const Index = () => {
           const timeoutId = setTimeout(() => {
             const targetId = neutral[Math.floor(Math.random() * neutral.length)].id;
             localGame.selectSettlementTerritory(targetId);
+            botSelectionInProgressRef.current = false;
           }, delay);
-          return () => clearTimeout(timeoutId);
+          return () => {
+            clearTimeout(timeoutId);
+            botSelectionInProgressRef.current = false;
+          };
         }
       }
     }
