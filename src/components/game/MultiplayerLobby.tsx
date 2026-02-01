@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Player } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Crown, Users, Swords, Castle, Copy, Check, Loader2, ArrowLeft, UserPlus, Plus, Bot } from 'lucide-react';
+import { Crown, Users, Swords, Castle, Copy, Check, Loader2, ArrowLeft, UserPlus, Plus, Bot, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 interface MultiplayerLobbyProps {
   sessionCode: string | null;
   players: Player[];
@@ -51,6 +51,7 @@ export function MultiplayerLobby({
   onSelectRole,
   onStartSinglePlayer,
 }: MultiplayerLobbyProps) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting' | 'singleplayer'>('menu');
   const [playerName, setPlayerName] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -169,6 +170,16 @@ export function MultiplayerLobby({
             >
               <UserPlus className="w-5 h-5 mr-2" />
               Присоединиться
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/map')}
+              className="w-full text-muted-foreground"
+            >
+              <Map className="w-4 h-4 mr-2" />
+              Карта (дебаг)
             </Button>
           </CardContent>
         </Card>
