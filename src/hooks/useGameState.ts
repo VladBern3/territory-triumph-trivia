@@ -39,7 +39,6 @@ export function useGameState(questionProviders?: QuestionProviders) {
   });
 
   const [answers, setAnswers] = useState<Answer[]>([]);
-  const [displayedAnswers, setDisplayedAnswers] = useState<Answer[]>([]); // For UI display
   const [isShowingResults, setIsShowingResults] = useState(false);
   const animationQueueRef = useRef<{ territoryId: string; playerId: string; isCapital: boolean }[]>([]);
 
@@ -187,9 +186,6 @@ export function useGameState(questionProviders?: QuestionProviders) {
     const activePlayers = players.filter(p => !p.isEliminated);
     console.log('Checking answers:', answers.length, 'vs active players:', activePlayers.length);
     
-    // Update displayed answers for UI
-    setDisplayedAnswers([...answers]);
-    
     if (phase === 'settlement' && answers.length >= activePlayers.length) {
       console.log('All answers collected, showing results...');
       setIsShowingResults(true);
@@ -197,9 +193,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
       // Show results for 3 seconds, then process
       setTimeout(() => {
         console.log('Processing settlement answers...');
-        processSettlementAnswers(answers, currentQuestion);
-        setIsShowingResults(false);
-        setDisplayedAnswers([]);
+        processSettlementAnswers([...answers], currentQuestion);
       }, 3000);
     } else if ((phase === 'war' || phase === 'capital_battle') && answers.length >= 2) {
       console.log('Processing war answers...');
@@ -222,8 +216,9 @@ export function useGameState(questionProviders?: QuestionProviders) {
 
     console.log('Sorted answers:', sorted.map(s => ({ playerId: s.playerId, answer: s.answer, dist: Math.abs(Number(s.answer) - correctAnswer) })));
 
-    // Clear answers immediately to prevent reprocessing
+    // Clear answers and reset showing results flag
     setAnswers([]);
+    setIsShowingResults(false);
 
     // Get current neutral territories from state
     let currentTerritories = [...gameState.territories];
@@ -482,7 +477,6 @@ export function useGameState(questionProviders?: QuestionProviders) {
     resetGame,
     neutralTerritories,
     answers,
-    displayedAnswers,
     isShowingResults,
   };
 }

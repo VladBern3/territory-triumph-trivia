@@ -233,7 +233,7 @@ const Index = () => {
       onSelectTarget={handleSelectTarget}
       attackableTerritories={localGame.getAttackableTerritories()}
       waitingForAnswers={localGame.answers.length > 0}
-      collectedAnswers={localGame.displayedAnswers}
+      collectedAnswers={localGame.answers}
     />
   );
 };
