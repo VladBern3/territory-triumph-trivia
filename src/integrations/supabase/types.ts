@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      choice_questions: {
+        Row: {
+          category: string | null
+          correct_answer: string
+          created_at: string | null
+          difficulty: number | null
+          id: string
+          options: Json
+          text: string
+        }
+        Insert: {
+          category?: string | null
+          correct_answer: string
+          created_at?: string | null
+          difficulty?: number | null
+          id?: string
+          options: Json
+          text: string
+        }
+        Update: {
+          category?: string | null
+          correct_answer?: string
+          created_at?: string | null
+          difficulty?: number | null
+          id?: string
+          options?: Json
+          text?: string
+        }
+        Relationships: []
+      }
       game_sessions: {
         Row: {
           answers: Json | null
@@ -74,6 +104,33 @@ export type Database = {
           target_territory?: string | null
           updated_at?: string
           winner?: Json | null
+        }
+        Relationships: []
+      }
+      numeric_questions: {
+        Row: {
+          category: string | null
+          correct_answer: number
+          created_at: string | null
+          difficulty: number | null
+          id: string
+          text: string
+        }
+        Insert: {
+          category?: string | null
+          correct_answer: number
+          created_at?: string | null
+          difficulty?: number | null
+          id?: string
+          text: string
+        }
+        Update: {
+          category?: string | null
+          correct_answer?: number
+          created_at?: string | null
+          difficulty?: number | null
+          id?: string
+          text?: string
         }
         Relationships: []
       }

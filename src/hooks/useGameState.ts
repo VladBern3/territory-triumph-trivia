@@ -1,13 +1,19 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { GameState, Player, Territory, Answer, Question, TerritoryAnimation } from '@/types/game';
 import { initialTerritories, getMaximallyDistantTerritories } from '@/data/territories';
-import { getRandomNumericQuestion, getRandomMultipleChoiceQuestion } from '@/data/questions';
 
 const ANIMATION_DURATION = 800; // ms for capture animation
 const CAPITAL_POINTS = 1000;
 const TERRITORY_POINTS = 200;
 
-export function useGameState() {
+interface QuestionProviders {
+  getRandomNumericQuestion: () => Question | null;
+  getRandomChoiceQuestion: () => Question | null;
+}
+
+export function useGameState(questionProviders?: QuestionProviders) {
+  const getNumericQuestion = questionProviders?.getRandomNumericQuestion || (() => null);
+  const getChoiceQuestion = questionProviders?.getRandomChoiceQuestion || (() => null);
   const [gameState, setGameState] = useState<GameState>({
     phase: 'lobby',
     players: [],
@@ -23,7 +29,6 @@ export function useGameState() {
     currentAnimation: null,
   });
 
-  const [usedQuestionIds, setUsedQuestionIds] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const animationQueueRef = useRef<{ territoryId: string; playerId: string; isCapital: boolean }[]>([]);
 
@@ -96,7 +101,7 @@ export function useGameState() {
     }
 
     // After all initial animations, start the settlement phase
-    const firstQuestion = getRandomNumericQuestion([]);
+    const firstQuestion = getNumericQuestion();
     
     setGameState(prev => ({
       ...prev,
@@ -106,10 +111,7 @@ export function useGameState() {
       roundNumber: 1,
     }));
     
-    if (firstQuestion) {
-      setUsedQuestionIds([firstQuestion.id]);
-    }
-  }, [animateCapture]);
+  }, [animateCapture, getNumericQuestion]);
 
   // Initialize game with players - auto-assign starting territories maximally apart
   const startGame = useCallback((playerData: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>[]) => {
@@ -218,12 +220,8 @@ export function useGameState() {
       
       // Get next question
       const nextQuestion = newPhase === 'war' 
-        ? getRandomMultipleChoiceQuestion(usedQuestionIds)
-        : getRandomNumericQuestion(usedQuestionIds);
-      
-      if (nextQuestion) {
-        setUsedQuestionIds(ids => [...ids, nextQuestion.id]);
-      }
+        ? getChoiceQuestion()
+        : getNumericQuestion();
       
       setAnswers([]);
       
@@ -267,10 +265,7 @@ export function useGameState() {
     setGameState(prev => {
       if (!attackerWins) {
         // Attack failed
-        const nextQuestion = getRandomMultipleChoiceQuestion(usedQuestionIds);
-        if (nextQuestion) {
-          setUsedQuestionIds(ids => [...ids, nextQuestion.id]);
-        }
+        const nextQuestion = getChoiceQuestion();
         setAnswers([]);
         
         const activePlayers = prev.players.filter(p => !p.isEliminated);
@@ -293,10 +288,7 @@ export function useGameState() {
       const isCapitalBattle = targetTerritory.isCapital;
       
       if (isCapitalBattle && phase === 'capital_battle' && prev.capitalBattleRound < 3) {
-        const nextQuestion = getRandomMultipleChoiceQuestion(usedQuestionIds);
-        if (nextQuestion) {
-          setUsedQuestionIds(ids => [...ids, nextQuestion.id]);
-        }
+        const nextQuestion = getChoiceQuestion();
         setAnswers([]);
         
         return {
@@ -343,10 +335,7 @@ export function useGameState() {
         };
       }
       
-      const nextQuestion = getRandomMultipleChoiceQuestion(usedQuestionIds);
-      if (nextQuestion) {
-        setUsedQuestionIds(ids => [...ids, nextQuestion.id]);
-      }
+      const nextQuestion = getChoiceQuestion();
       setAnswers([]);
       
       const currentIndex = activePlayers.findIndex(p => p.id === prev.currentTurnPlayerId);
@@ -422,7 +411,6 @@ export function useGameState() {
       winner: null,
       currentAnimation: null,
     });
-    setUsedQuestionIds([]);
     setAnswers([]);
   }, []);
 
