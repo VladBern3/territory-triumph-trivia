@@ -30,7 +30,7 @@ const playerColorValues: Record<string, string> = {
 const neutralColor = 'hsl(38, 25%, 85%)';
 const gapColor = 'transparent';
 const selectedStrokeColor = 'hsl(38, 70%, 50%)';
-const mapBackgroundColor = 'hsl(220, 60%, 20%)';
+const mapBackgroundColor = 'transparent';
 
 export function CzechoslovakiaMap({
   territories,
