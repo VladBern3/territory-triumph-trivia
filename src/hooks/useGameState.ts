@@ -4,6 +4,8 @@ import { initialTerritories, getMaximallyDistantTerritories } from '@/data/terri
 import { getRandomNumericQuestion, getRandomMultipleChoiceQuestion } from '@/data/questions';
 
 const ANIMATION_DURATION = 800; // ms for capture animation
+const CAPITAL_POINTS = 1000;
+const TERRITORY_POINTS = 200;
 
 export function useGameState() {
   const [gameState, setGameState] = useState<GameState>({
@@ -55,12 +57,14 @@ export function useGameState() {
               ? { ...t, ownerId: playerId, isCapital } 
               : t
           );
+          const pointsToAdd = isCapital ? CAPITAL_POINTS : TERRITORY_POINTS;
           const newPlayers = prev.players.map(p => 
             p.id === playerId 
               ? { 
                   ...p, 
                   territories: [...p.territories, territoryId],
                   capitalId: isCapital ? territoryId : p.capitalId,
+                  score: p.score + pointsToAdd,
                 } 
               : p
           );
@@ -176,7 +180,7 @@ export function useGameState() {
   const processSettlementAnswers = async (submittedAnswers: Answer[], question: Question) => {
     const correctAnswer = Number(question.correctAnswer);
     
-    // Sort by distance to correct answer, then by timestamp
+    // Sort by distance to correct answer, then by timestamp (closer = better)
     const sorted = [...submittedAnswers].sort((a, b) => {
       const distA = Math.abs(Number(a.answer) - correctAnswer);
       const distB = Math.abs(Number(b.answer) - correctAnswer);
@@ -184,27 +188,31 @@ export function useGameState() {
       return a.timestamp - b.timestamp;
     });
 
-    // Get available neutral territories
-    const available = gameState.territories.filter(t => t.ownerId === null);
-    
-    // First place gets 2 territories
-    if (sorted[0] && available.length > 0) {
-      await animateCapture(available[0].id, sorted[0].playerId, false);
-      
-      const remainingAfterFirst = gameState.territories.filter(t => t.ownerId === null);
-      if (remainingAfterFirst.length > 0) {
-        await animateCapture(remainingAfterFirst[0].id, sorted[0].playerId, false);
+    // First place gets 2 territories (each worth 200 points)
+    if (sorted[0]) {
+      let available = gameState.territories.filter(t => t.ownerId === null);
+      if (available.length > 0) {
+        await animateCapture(available[0].id, sorted[0].playerId, false);
+      }
+      // Get fresh list after first capture
+      available = gameState.territories.filter(t => t.ownerId === null);
+      if (available.length > 0) {
+        await animateCapture(available[0].id, sorted[0].playerId, false);
       }
     }
     
-    // Second place gets 1 territory
-    setGameState(prev => {
-      const remainingAvailable = prev.territories.filter(t => t.ownerId === null);
-      if (sorted[1] && remainingAvailable.length > 0) {
-        // This will be handled by animateCapture
+    // Second place gets 1 territory (worth 200 points)
+    if (sorted[1]) {
+      const available = gameState.territories.filter(t => t.ownerId === null);
+      if (available.length > 0) {
+        await animateCapture(available[0].id, sorted[1].playerId, false);
       }
-      
-      // Check if settlement phase is over
+    }
+    
+    // Third place gets nothing
+    
+    // After all animations, check if settlement phase is over and move to next round
+    setGameState(prev => {
       const stillNeutral = prev.territories.filter(t => t.ownerId === null);
       const newPhase = stillNeutral.length <= 1 ? 'war' : 'settlement';
       
