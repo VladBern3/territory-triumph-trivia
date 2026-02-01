@@ -415,13 +415,15 @@ export function CzechoslovakiaMap({
           return (
             <div
               key={`animating-crown-${animatingCapital.territoryId}`}
-              className="absolute flex flex-col items-center pointer-events-none animate-crown-appear"
+              className="absolute flex flex-col items-center pointer-events-none"
               style={{
                 left: `${xPercent}%`,
                 top: `${yPercent}%`,
                 transform: 'translate(-50%, -50%)',
               }}
             >
+              {/* Animated wrapper to prevent position jumping */}
+              <div className="animate-crown-appear flex flex-col items-center">
               {/* Player name above crown */}
               <span 
                 className="text-xs font-bold px-2 py-0.5 rounded-full mb-1 whitespace-nowrap shadow-md"
@@ -447,6 +449,7 @@ export function CzechoslovakiaMap({
                     filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
                   }} 
                 />
+              </div>
               </div>
             </div>
           );
