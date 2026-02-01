@@ -49,33 +49,14 @@ export function CzechoslovakiaMap({
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [animationProgress, setAnimationProgress] = useState<Record<string, number>>({});
-  const [territoryCenters, setTerritoryCenters] = useState<Record<string, TerritoryCenter>>({});
   // Track territories that should show flags with fade state
   const [visibleFlags, setVisibleFlags] = useState<Map<string, { playerId: string; isFadingOut: boolean }>>(new Map());
 
-  // Calculate territory centers from actual SVG path bounding boxes
-  const calculateTerritoryCenters = useCallback(() => {
-    if (!svgRef.current) return;
-    
-    const paths = svgRef.current.querySelectorAll('path');
-    const centers: Record<string, TerritoryCenter> = {};
-    
-    paths.forEach((path, index) => {
-      const territoryId = `region-${index + 1}`;
-      try {
-        const bbox = path.getBBox();
-        centers[territoryId] = {
-          x: bbox.x + bbox.width / 2,
-          y: bbox.y + bbox.height / 2,
-        };
-      } catch (e) {
-        // Fallback if getBBox fails
-        centers[territoryId] = { x: 400, y: 300 };
-      }
-    });
-    
-    setTerritoryCenters(centers);
-  }, []);
+  // Use hardcoded territory centers from territory data
+  const territoryCenters = territories.reduce((acc, t) => {
+    acc[t.id] = t.position;
+    return acc;
+  }, {} as Record<string, { x: number; y: number }>);
 
   // Load SVG content with cache-busting
   useEffect(() => {
@@ -85,15 +66,6 @@ export function CzechoslovakiaMap({
       .then(text => setSvgContent(text))
       .catch(err => console.error('Failed to load map:', err));
   }, []);
-
-  // Calculate centers after SVG is loaded and rendered
-  useEffect(() => {
-    if (svgContent && svgRef.current) {
-      // Small delay to ensure SVG is fully rendered
-      const timer = setTimeout(calculateTerritoryCenters, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [svgContent, calculateTerritoryCenters]);
 
   // Handle capture animation and flag display
   // Refs to store timer IDs so we can clean them up
