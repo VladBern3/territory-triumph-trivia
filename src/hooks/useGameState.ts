@@ -45,7 +45,18 @@ export function useGameState(questionProviders?: QuestionProviders) {
   const [questionStartTime, setQuestionStartTime] = useState<number>(0);
   const animationQueueRef = useRef<{ territoryId: string; playerId: string; isCapital: boolean }[]>([]);
   const roundTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const gameStateRef = useRef(gameState); // Ref to track latest gameState
+  const answersRef = useRef(answers); // Ref to track latest answers
   const QUESTION_TIME_LIMIT = 10; // seconds
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
 
   // Get unowned territories
   const neutralTerritories = useMemo(() => 
@@ -129,63 +140,22 @@ export function useGameState(questionProviders?: QuestionProviders) {
     
   }, [animateCapture, getNumericQuestion]);
 
-  // Start a timer that force-completes the round when time expires
-  const startRoundTimer = useCallback((question: Question | null) => {
+  // Start a timer that force-completes the question when time expires
+  const startQuestionTimer = useCallback(() => {
     // Clear any existing timer
     if (roundTimerRef.current) {
       clearTimeout(roundTimerRef.current);
       roundTimerRef.current = null;
     }
     
-    if (!question) return;
-    
     roundTimerRef.current = setTimeout(() => {
-      console.log('Round timer expired, force completing round...');
-      forceCompleteRound();
-    }, (QUESTION_TIME_LIMIT + 1) * 1000); // +1 second buffer for network/UI
-  }, []);
-
-  // Force complete the round - fill in missing answers as null
-  const forceCompleteRound = useCallback(() => {
-    setAnswers(prevAnswers => {
-      setGameState(prevState => {
-        const { phase, currentQuestion, players, attackingPlayerId, defendingPlayerId } = prevState;
-        
-        if (!currentQuestion) return prevState;
-        
-        const activePlayers = players.filter(p => !p.isEliminated);
-        let expectedPlayers: string[] = [];
-        
-        if (phase === 'settlement') {
-          expectedPlayers = activePlayers.map(p => p.id);
-        } else if (phase === 'war' || phase === 'capital_battle') {
-          if (attackingPlayerId) expectedPlayers.push(attackingPlayerId);
-          if (defendingPlayerId) expectedPlayers.push(defendingPlayerId);
-        }
-        
-        // Find who didn't answer
-        const answeredPlayerIds = new Set(prevAnswers.map(a => a.playerId));
-        const missingAnswers: Answer[] = expectedPlayers
-          .filter(id => !answeredPlayerIds.has(id))
-          .map(playerId => ({
-            playerId,
-            answer: null,
-            timestamp: Date.now(),
-          }));
-        
-        if (missingAnswers.length > 0) {
-          console.log('Adding missing answers for players:', missingAnswers.map(a => a.playerId));
-          // Return combined answers - this will trigger the processing effect
-          return prevState; // State unchanged, but we update answers below
-        }
-        
-        return prevState;
-      });
+      console.log('Question timer expired, force completing...');
       
-      // Get current state to add missing answers
-      const { phase, currentQuestion, players, attackingPlayerId, defendingPlayerId } = gameState;
+      // Use refs to get latest state
+      const { phase, currentQuestion, players, attackingPlayerId, defendingPlayerId } = gameStateRef.current;
+      const currentAnswers = answersRef.current;
       
-      if (!currentQuestion) return prevAnswers;
+      if (!currentQuestion) return;
       
       const activePlayers = players.filter(p => !p.isEliminated);
       let expectedPlayers: string[] = [];
@@ -197,7 +167,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
         if (defendingPlayerId) expectedPlayers.push(defendingPlayerId);
       }
       
-      const answeredPlayerIds = new Set(prevAnswers.map(a => a.playerId));
+      const answeredPlayerIds = new Set(currentAnswers.map(a => a.playerId));
       const missingAnswers: Answer[] = expectedPlayers
         .filter(id => !answeredPlayerIds.has(id))
         .map(playerId => ({
@@ -207,13 +177,11 @@ export function useGameState(questionProviders?: QuestionProviders) {
         }));
       
       if (missingAnswers.length > 0) {
-        console.log('Force adding missing answers:', missingAnswers);
-        return [...prevAnswers, ...missingAnswers];
+        console.log('Force adding missing answers for:', missingAnswers.map(a => a.playerId));
+        setAnswers(prev => [...prev, ...missingAnswers]);
       }
-      
-      return prevAnswers;
-    });
-  }, [gameState]);
+    }, (QUESTION_TIME_LIMIT + 0.5) * 1000); // +0.5 second buffer after UI timer
+  }, []);
 
   // Initialize game with players - auto-assign starting territories maximally apart
   const startGame = useCallback((playerData: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>[]) => {
@@ -269,11 +237,11 @@ export function useGameState(questionProviders?: QuestionProviders) {
     });
   }, []);
 
-  // Effect to start round timer when question changes
+  // Effect to start question timer when question changes
   useEffect(() => {
     if (gameState.currentQuestion && !isShowingResults) {
       setQuestionStartTime(Date.now());
-      startRoundTimer(gameState.currentQuestion);
+      startQuestionTimer();
     }
     
     return () => {
@@ -282,7 +250,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
         roundTimerRef.current = null;
       }
     };
-  }, [gameState.currentQuestion?.id, isShowingResults, startRoundTimer]);
+  }, [gameState.currentQuestion?.id, isShowingResults, startQuestionTimer]);
 
   // Effect to process answers when all players have responded
   useEffect(() => {
