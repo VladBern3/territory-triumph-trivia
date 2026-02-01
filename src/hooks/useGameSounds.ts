@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 
-// Free royalty-free sound effects URLs
+// Game sound effects URLs
 const SOUND_URLS = {
   gameStart: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // War horn
-  peacefulCapture: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3', // Trumpet fanfare
+  peacefulCapture: '/sounds/peaceful-capture.mp3', // Custom peaceful capture sound
   enemyCapture: 'https://assets.mixkit.co/active_storage/sfx/2759/2759-preview.mp3', // Sword clash
   underAttack: 'https://assets.mixkit.co/active_storage/sfx/2462/2462-preview.mp3', // War drums
 };
