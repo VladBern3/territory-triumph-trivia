@@ -105,10 +105,10 @@ export function CzechoslovakiaMap({
 
     const { territoryId, duration, startTime, playerId } = currentAnimation;
     
-    // Don't show flags for capitals or during capital distribution phase
+    // Check if we should show flags (not for capitals, not during initializing phase)
     const territory = territories.find(t => t.id === territoryId);
-    const isCapitalDistribution = gamePhase !== 'settlement' && gamePhase !== 'war' && gamePhase !== 'capital_battle';
-    if (territory?.isCapital || isCapitalDistribution) return;
+    const shouldShowFlag = !territory?.isCapital && 
+      (gamePhase === 'settlement' || gamePhase === 'war' || gamePhase === 'capital_battle');
     
     // Clear any existing timers for this territory
     const existingTimers = flagTimersRef.current.get(territoryId);
@@ -118,13 +118,16 @@ export function CzechoslovakiaMap({
       flagTimersRef.current.delete(territoryId);
     }
     
-    // Show flag for this territory (fade in)
-    setVisibleFlags(prev => {
-      const next = new Map(prev);
-      next.set(territoryId, { playerId, isFadingOut: false });
-      return next;
-    });
+    // Show flag for this territory (only if appropriate)
+    if (shouldShowFlag) {
+      setVisibleFlags(prev => {
+        const next = new Map(prev);
+        next.set(territoryId, { playerId, isFadingOut: false });
+        return next;
+      });
+    }
     
+    // Always run the animation progress (for territory coloring)
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -137,36 +140,38 @@ export function CzechoslovakiaMap({
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        // Animation complete - start fade out after 1 second
-        const fadeOutTimer = setTimeout(() => {
-          setVisibleFlags(current => {
-            const updated = new Map(current);
-            const existing = updated.get(territoryId);
-            if (existing) {
-              updated.set(territoryId, { ...existing, isFadingOut: true });
-            }
-            return updated;
-          });
-          
-          // Remove flag completely after fade animation (400ms)
-          const removeTimer = setTimeout(() => {
+        // Animation complete - handle flag fade out if flag was shown
+        if (shouldShowFlag) {
+          const fadeOutTimer = setTimeout(() => {
             setVisibleFlags(current => {
               const updated = new Map(current);
-              updated.delete(territoryId);
+              const existing = updated.get(territoryId);
+              if (existing) {
+                updated.set(territoryId, { ...existing, isFadingOut: true });
+              }
               return updated;
             });
-            flagTimersRef.current.delete(territoryId);
-          }, 400);
+            
+            // Remove flag completely after fade animation (400ms)
+            const removeTimer = setTimeout(() => {
+              setVisibleFlags(current => {
+                const updated = new Map(current);
+                updated.delete(territoryId);
+                return updated;
+              });
+              flagTimersRef.current.delete(territoryId);
+            }, 400);
+            
+            flagTimersRef.current.set(territoryId, { remove: removeTimer });
+          }, 1000); // 1 second visible before fade starts
           
-          flagTimersRef.current.set(territoryId, { remove: removeTimer });
-        }, 1000); // 1 second visible before fade starts
-        
-        flagTimersRef.current.set(territoryId, { fadeOut: fadeOutTimer });
+          flagTimersRef.current.set(territoryId, { fadeOut: fadeOutTimer });
+        }
       }
     };
 
     requestAnimationFrame(animate);
-  }, [currentAnimation, territories]);
+  }, [currentAnimation, territories, gamePhase]);
 
   // Apply styles to SVG paths
   useEffect(() => {
