@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { initialTerritories } from '@/data/territories';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Move, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CzechoslovakiaMap } from '@/components/game/CzechoslovakiaMap';
@@ -27,9 +27,23 @@ const MapDebug = () => {
   const [showCalculated, setShowCalculated] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [useGameMap, setUseGameMap] = useState(false);
+  const [isDragMode, setIsDragMode] = useState(false);
+  const [customCenters, setCustomCenters] = useState<Record<string, TerritoryCenter>>({});
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedTerritory = territories.find(t => t.id === selectedTerritoryId);
+
+  // Initialize custom centers from territories
+  useEffect(() => {
+    const centers: Record<string, TerritoryCenter> = {};
+    territories.forEach(t => {
+      centers[t.id] = { ...t.position };
+    });
+    setCustomCenters(centers);
+  }, []);
 
   // Load SVG content
   useEffect(() => {
@@ -96,13 +110,59 @@ const MapDebug = () => {
     });
   }, [svgContent, selectedTerritoryId, useGameMap]);
 
-  // Get displayed centers - either hardcoded or calculated
-  const displayedCenters = showCalculated 
-    ? calculatedCenters 
-    : territories.reduce((acc, t) => {
-        acc[t.id] = t.position;
-        return acc;
-      }, {} as Record<string, TerritoryCenter>);
+  // Get displayed centers - use custom centers in drag mode, otherwise normal logic
+  const displayedCenters = isDragMode 
+    ? customCenters 
+    : (showCalculated 
+      ? calculatedCenters 
+      : territories.reduce((acc, t) => {
+          acc[t.id] = t.position;
+          return acc;
+        }, {} as Record<string, TerritoryCenter>));
+
+  // Handle drag start
+  const handleDragStart = useCallback((e: React.MouseEvent, territoryId: string) => {
+    if (!isDragMode) return;
+    e.preventDefault();
+    setDraggingId(territoryId);
+    setSelectedTerritoryId(territoryId);
+  }, [isDragMode]);
+
+  // Handle drag move
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!draggingId || !mapContainerRef.current) return;
+    
+    const rect = mapContainerRef.current.getBoundingClientRect();
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * 1499);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * 717);
+    
+    // Clamp to valid range
+    const clampedX = Math.max(0, Math.min(1499, x));
+    const clampedY = Math.max(0, Math.min(717, y));
+    
+    setCustomCenters(prev => ({
+      ...prev,
+      [draggingId]: { x: clampedX, y: clampedY }
+    }));
+    setHasChanges(true);
+  }, [draggingId]);
+
+  // Handle drag end
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null);
+  }, []);
+
+  // Add/remove global mouse listeners for dragging
+  useEffect(() => {
+    if (draggingId) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleDragMove);
+        window.removeEventListener('mouseup', handleDragEnd);
+      };
+    }
+  }, [draggingId, handleDragMove, handleDragEnd]);
 
   // Copy all coordinates to clipboard
   const copyAllCoordinates = () => {
@@ -137,13 +197,43 @@ const MapDebug = () => {
         
         <div className="flex items-center gap-2 ml-auto flex-wrap">
           <Button 
+            variant={isDragMode ? "default" : "outline"} 
+            size="sm"
+            onClick={() => {
+              setIsDragMode(!isDragMode);
+              if (!isDragMode) {
+                // Entering drag mode - initialize from current positions
+                const centers: Record<string, TerritoryCenter> = {};
+                territories.forEach(t => {
+                  centers[t.id] = { ...t.position };
+                });
+                setCustomCenters(centers);
+              }
+            }}
+            className={isDragMode ? "bg-green-600 hover:bg-green-700" : ""}
+          >
+            <Move className="w-4 h-4 mr-2" />
+            {isDragMode ? "Режим перетаскивания ВКЛ" : "Перетаскивать центры"}
+          </Button>
+          {hasChanges && (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={copyAllCoordinates}
+              className="bg-amber-600 hover:bg-amber-700 animate-pulse"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Сохранить изменения
+            </Button>
+          )}
+          <Button 
             variant={useGameMap ? "default" : "outline"} 
             size="sm"
             onClick={() => setUseGameMap(!useGameMap)}
           >
             {useGameMap ? "Простая карта" : "Как в игре"}
           </Button>
-          {!useGameMap && (
+          {!useGameMap && !isDragMode && (
             <Button 
               variant={showCalculated ? "default" : "outline"} 
               size="sm"
@@ -158,6 +248,16 @@ const MapDebug = () => {
           </Button>
         </div>
       </div>
+
+      {/* Drag mode instructions */}
+      {isDragMode && (
+        <div className="px-4 pb-2">
+          <div className="bg-green-100 border border-green-300 rounded-lg px-4 py-2 text-green-800 text-sm">
+            <strong>Режим перетаскивания:</strong> Зажмите и перетащите красные точки чтобы переместить центры регионов. 
+            После настройки нажмите "Сохранить изменения" чтобы скопировать координаты в буфер обмена и вставить в territories.ts
+          </div>
+        </div>
+      )}
 
       {/* Selected territory info */}
       {selectedTerritory && (
@@ -195,27 +295,40 @@ const MapDebug = () => {
             />
             
             {/* Overlay with markers showing center positions */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div 
+              ref={mapContainerRef}
+              className="absolute inset-0 pointer-events-none flex items-center justify-center"
+            >
               <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
                 {Object.entries(displayedCenters).map(([territoryId, center]) => {
                   const isSelected = selectedTerritoryId === territoryId;
+                  const isDragging = draggingId === territoryId;
                   
                   return (
                     <div
                       key={territoryId}
-                      className="absolute pointer-events-auto cursor-pointer group"
+                      className={`absolute pointer-events-auto group ${
+                        isDragMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+                      } ${isDragging ? 'z-50' : ''}`}
                       style={{
                         left: `${(center.x / 1499) * 100}%`,
                         top: `${(center.y / 717) * 100}%`,
                         transform: 'translate(-50%, -50%)',
                       }}
-                      onClick={() => setSelectedTerritoryId(territoryId)}
+                      onClick={() => !isDragMode && setSelectedTerritoryId(territoryId)}
+                      onMouseDown={(e) => handleDragStart(e, territoryId)}
                     >
                       {/* Center dot */}
                       <div 
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
+                        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white transition-all ${
+                          isDragMode ? 'w-5 h-5' : 'w-3 h-3'
+                        } ${isDragging ? 'scale-125' : ''}`}
                         style={{
-                          backgroundColor: isSelected ? 'hsl(45, 93%, 47%)' : 'hsl(0, 84%, 60%)',
+                          backgroundColor: isDragging 
+                            ? 'hsl(142, 76%, 36%)' 
+                            : isSelected 
+                              ? 'hsl(45, 93%, 47%)' 
+                              : 'hsl(0, 84%, 60%)',
                           boxShadow: '0 0 6px rgba(0,0,0,0.7)',
                         }}
                       />
@@ -224,27 +337,36 @@ const MapDebug = () => {
                       <div 
                         className="absolute left-1/2 -translate-x-1/2 -top-6 text-xs font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg flex items-center gap-1"
                         style={{
-                          backgroundColor: isSelected 
-                            ? 'hsl(45, 93%, 47%)' 
-                            : 'rgba(0, 0, 0, 0.85)',
-                          color: isSelected ? '#1a1a1a' : 'white',
-                          textShadow: isSelected ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                          backgroundColor: isDragging
+                            ? 'hsl(142, 76%, 36%)'
+                            : isSelected 
+                              ? 'hsl(45, 93%, 47%)' 
+                              : 'rgba(0, 0, 0, 0.85)',
+                          color: (isSelected || isDragging) ? '#1a1a1a' : 'white',
+                          textShadow: (isSelected || isDragging) ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
                         }}
                       >
                         <span>{territoryId.replace('region-', '')}</span>
-                        <button
-                          className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copySingleCoordinate(territoryId);
-                          }}
-                        >
-                          {copiedId === territoryId ? (
-                            <Check className="w-3 h-3 text-green-400" />
-                          ) : (
-                            <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
-                          )}
-                        </button>
+                        {isDragMode && (
+                          <span className="text-[10px] opacity-75">
+                            ({center.x}, {center.y})
+                          </span>
+                        )}
+                        {!isDragMode && (
+                          <button
+                            className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copySingleCoordinate(territoryId);
+                            }}
+                          >
+                            {copiedId === territoryId ? (
+                              <Check className="w-3 h-3 text-green-400" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -255,6 +377,7 @@ const MapDebug = () => {
         ) : (
           /* Simple debug map */
           <div 
+            ref={!useGameMap ? mapContainerRef : undefined}
             className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden" 
             style={{ 
               perspective: '1000px',
@@ -284,23 +407,33 @@ const MapDebug = () => {
               {/* Region markers at displayed center positions */}
               {Object.entries(displayedCenters).map(([territoryId, center]) => {
                 const isSelected = selectedTerritoryId === territoryId;
+                const isDragging = draggingId === territoryId;
                 
                 return (
                   <div
                     key={territoryId}
-                    className="absolute pointer-events-auto cursor-pointer group"
+                    className={`absolute pointer-events-auto group ${
+                      isDragMode ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+                    } ${isDragging ? 'z-50' : ''}`}
                     style={{
                       left: `${(center.x / 1499) * 100}%`,
                       top: `${(center.y / 717) * 100}%`,
                       transform: 'translate(-50%, -50%)',
                     }}
-                    onClick={() => setSelectedTerritoryId(territoryId)}
+                    onClick={() => !isDragMode && setSelectedTerritoryId(territoryId)}
+                    onMouseDown={(e) => handleDragStart(e, territoryId)}
                   >
                     {/* Center dot */}
                     <div 
-                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                      className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all ${
+                        isDragMode ? 'w-4 h-4' : 'w-2 h-2'
+                      } ${isDragging ? 'scale-125' : ''}`}
                       style={{
-                        backgroundColor: showCalculated ? 'hsl(217, 91%, 60%)' : 'hsl(0, 84%, 60%)',
+                        backgroundColor: isDragging 
+                          ? 'hsl(142, 76%, 36%)' 
+                          : showCalculated 
+                            ? 'hsl(217, 91%, 60%)' 
+                            : 'hsl(0, 84%, 60%)',
                         boxShadow: '0 0 4px rgba(0,0,0,0.5)',
                       }}
                     />
@@ -309,35 +442,46 @@ const MapDebug = () => {
                     <div 
                       className="text-xs font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg flex items-center gap-1"
                       style={{
-                        backgroundColor: isSelected 
-                          ? 'hsl(45, 93%, 47%)' 
-                          : 'rgba(0, 0, 0, 0.85)',
-                        color: isSelected ? '#1a1a1a' : 'white',
-                        textShadow: isSelected ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                        backgroundColor: isDragging
+                          ? 'hsl(142, 76%, 36%)'
+                          : isSelected 
+                            ? 'hsl(45, 93%, 47%)' 
+                            : 'rgba(0, 0, 0, 0.85)',
+                        color: (isSelected || isDragging) ? '#1a1a1a' : 'white',
+                        textShadow: (isSelected || isDragging) ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
                       }}
                     >
                       <span>{territoryId.replace('region-', '')}</span>
-                      <button
-                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copySingleCoordinate(territoryId);
-                        }}
-                      >
-                        {copiedId === territoryId ? (
-                          <Check className="w-3 h-3 text-green-400" />
-                        ) : (
-                          <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
-                        )}
-                      </button>
+                      {isDragMode && (
+                        <span className="text-[10px] opacity-75">
+                          ({center.x}, {center.y})
+                        </span>
+                      )}
+                      {!isDragMode && (
+                        <button
+                          className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copySingleCoordinate(territoryId);
+                          }}
+                        >
+                          {copiedId === territoryId ? (
+                            <Check className="w-3 h-3 text-green-400" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-400 hover:text-white" />
+                          )}
+                        </button>
+                      )}
                     </div>
                     
                     {/* Coordinates tooltip on hover */}
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      <div className="bg-black/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                        x: {center.x}, y: {center.y}
+                    {!isDragMode && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        <div className="bg-black/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                          x: {center.x}, y: {center.y}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
