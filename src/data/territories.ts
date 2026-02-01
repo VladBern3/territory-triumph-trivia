@@ -6,26 +6,25 @@ import { Territory } from "@/types/game";
 
 // Approximate center positions calculated from path bounding boxes
 const regionCenters: Record<string, { x: number; y: number }> = {
-  "region-1": { x: 68, y: 194 },
-  "region-2": { x: 161, y: 315 },
+  "region-1": { x: 96, y: 190 },
+  "region-2": { x: 157, y: 310 },
   "region-3": { x: 322, y: 426 },
   "region-4": { x: 363, y: 233 },
-  "region-5": { x: 199, y: 129 },
-  "region-6": { x: 415, y: 66 },
-  "region-7": { x: 553, y: 157 },
+  "region-5": { x: 251, y: 122 },
+  "region-6": { x: 426, y: 68 },
+  "region-7": { x: 545, y: 134 },
   "region-8": { x: 591, y: 265 },
   "region-9": { x: 515, y: 355 },
   "region-10": { x: 657, y: 427 },
   "region-11": { x: 734, y: 314 },
   "region-12": { x: 840, y: 271 },
   "region-13": { x: 812, y: 397 },
-  "region-14": { x: 825, y: 527 },
-  "region-15": { x: 1016, y: 340 },
+  "region-14": { x: 818, y: 520 },
+  "region-15": { x: 1021, y: 379 },
   "region-16": { x: 1320, y: 396 },
-  "region-17": { x: 1082, y: 449 },
-  "region-18": { x: 747, y: 513 },
+  "region-17": { x: 1001, y: 561 },
+  "region-18": { x: 746, y: 591 },
 };
-
 // Neighbor relationships based on SVG adjacencies
 const regionNeighbors: Record<string, string[]> = {
   "region-1": ["region-2", "region-5"],
