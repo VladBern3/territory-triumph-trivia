@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_sessions: {
+        Row: {
+          answers: Json | null
+          attacking_player: string | null
+          capital_battle_round: number | null
+          code: string
+          created_at: string
+          current_animation: Json | null
+          current_question: Json | null
+          current_turn: string | null
+          defending_player: string | null
+          host_player_id: string
+          id: string
+          map_state: Json | null
+          phase: string
+          players: Json | null
+          round_number: number | null
+          target_territory: string | null
+          updated_at: string
+          winner: Json | null
+        }
+        Insert: {
+          answers?: Json | null
+          attacking_player?: string | null
+          capital_battle_round?: number | null
+          code: string
+          created_at?: string
+          current_animation?: Json | null
+          current_question?: Json | null
+          current_turn?: string | null
+          defending_player?: string | null
+          host_player_id: string
+          id?: string
+          map_state?: Json | null
+          phase?: string
+          players?: Json | null
+          round_number?: number | null
+          target_territory?: string | null
+          updated_at?: string
+          winner?: Json | null
+        }
+        Update: {
+          answers?: Json | null
+          attacking_player?: string | null
+          capital_battle_round?: number | null
+          code?: string
+          created_at?: string
+          current_animation?: Json | null
+          current_question?: Json | null
+          current_turn?: string | null
+          defending_player?: string | null
+          host_player_id?: string
+          id?: string
+          map_state?: Json | null
+          phase?: string
+          players?: Json | null
+          round_number?: number | null
+          target_territory?: string | null
+          updated_at?: string
+          winner?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
