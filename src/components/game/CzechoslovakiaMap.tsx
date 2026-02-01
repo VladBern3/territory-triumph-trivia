@@ -283,8 +283,15 @@ export function CzechoslovakiaMap({
     return { territory, owner, territoryId, isFadingOut: data.isFadingOut };
   }).filter(item => item.territory && item.owner);
 
-  // Get capitals with their owners for rendering crowns
+  // Get capitals with their owners for rendering crowns (including ones being animated)
   const capitals = territories.filter(t => t.isCapital && t.ownerId);
+  
+  // Also include capitals that are currently being animated (not yet owned but animation in progress)
+  const animatingCapital = currentAnimation?.isCapital ? {
+    territoryId: currentAnimation.territoryId,
+    playerId: currentAnimation.playerId,
+    progress: animationProgress[currentAnimation.territoryId] || 0,
+  } : null;
 
   return (
     <div 
@@ -366,7 +373,7 @@ export function CzechoslovakiaMap({
           );
         })}
         
-        {/* Capital crowns overlay */}
+        {/* Capital crowns overlay - existing capitals */}
         {capitals.map(capital => {
           const owner = players.find(p => p.id === capital.ownerId);
           if (!owner) return null;
@@ -381,7 +388,7 @@ export function CzechoslovakiaMap({
           return (
             <div
               key={capital.id}
-              className="absolute flex flex-col items-center pointer-events-none animate-fade-in"
+              className="absolute flex flex-col items-center pointer-events-none"
               style={{
                 left: `${xPercent}%`,
                 top: `${yPercent}%`,
@@ -417,6 +424,61 @@ export function CzechoslovakiaMap({
             </div>
           );
         })}
+        
+        {/* Animating capital crown - appears during coloring animation */}
+        {animatingCapital && animatingCapital.progress >= 0.4 && (() => {
+          const owner = players.find(p => p.id === animatingCapital.playerId);
+          if (!owner) return null;
+          
+          const center = territoryCenters[animatingCapital.territoryId];
+          if (!center) return null;
+          
+          // Don't show if already owned (will be rendered by capitals array)
+          const territory = territories.find(t => t.id === animatingCapital.territoryId);
+          if (territory?.ownerId) return null;
+          
+          const xPercent = (center.x / 1499) * 100;
+          const yPercent = (center.y / 717) * 100;
+          
+          return (
+            <div
+              key={`animating-crown-${animatingCapital.territoryId}`}
+              className="absolute flex flex-col items-center pointer-events-none animate-crown-appear"
+              style={{
+                left: `${xPercent}%`,
+                top: `${yPercent}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              {/* Player name above crown */}
+              <span 
+                className="text-xs font-bold px-2 py-0.5 rounded-full mb-1 whitespace-nowrap shadow-md"
+                style={{ 
+                  backgroundColor: playerColorValues[owner.color],
+                  color: owner.color === 'yellow' ? '#1a1a1a' : 'white',
+                  textShadow: owner.color === 'yellow' ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                }}
+              >
+                {owner.name}
+              </span>
+              {/* Crown icon */}
+              <div 
+                className="p-1.5 rounded-full shadow-lg"
+                style={{ 
+                  backgroundColor: playerColorValues[owner.color],
+                }}
+              >
+                <Crown 
+                  className="w-6 h-6" 
+                  style={{ 
+                    color: owner.color === 'yellow' ? '#1a1a1a' : 'white',
+                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
+                  }} 
+                />
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
