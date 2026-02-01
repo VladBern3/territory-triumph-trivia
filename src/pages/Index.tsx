@@ -253,10 +253,10 @@ const Index = () => {
     localGame.selectSettlementTerritory(territoryId);
   }, [localGame]);
 
-  // Get selectable settlement territories (all neutral territories - for backwards compatibility)
+  // Get selectable settlement territories (only adjacent neutral territories)
   const getSelectableSettlementTerritories = useCallback(() => {
-    return localGame.neutralTerritories.map(t => t.id);
-  }, [localGame.neutralTerritories]);
+    return localGame.getNeighborSettlementTerritories();
+  }, [localGame]);
 
   // Get neighbor settlement territories (neutral territories adjacent to current player)
   const getNeighborSettlementTerritories = useCallback(() => {
