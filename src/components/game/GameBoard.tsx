@@ -139,6 +139,8 @@ export function GameBoard({
             players={players} 
             currentPlayerId={currentTurnPlayerId} 
             roundNumber={roundNumber}
+            phase={phase}
+            capitalBattleRound={capitalBattleRound}
           />
         </div>
       </div>

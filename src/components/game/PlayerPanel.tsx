@@ -1,11 +1,14 @@
-import { Player } from '@/types/game';
+import { Player, GamePhase } from '@/types/game';
 import { cn } from '@/lib/utils';
 import { BattleIndicator } from './BattleIndicator';
+import { SettlementIndicator } from './SettlementIndicator';
 
 interface PlayerPanelProps {
   players: Player[];
   currentPlayerId: string | null;
   roundNumber: number;
+  phase: GamePhase;
+  capitalBattleRound?: number;
 }
 
 const playerBgClasses = {
@@ -22,7 +25,16 @@ const playerColorClasses = {
   yellow: 'bg-player-yellow',
 };
 
-export function PlayerPanel({ players, currentPlayerId, roundNumber }: PlayerPanelProps) {
+export function PlayerPanel({ 
+  players, 
+  currentPlayerId, 
+  roundNumber, 
+  phase,
+  capitalBattleRound = 0
+}: PlayerPanelProps) {
+  const isSettlementPhase = phase === 'settlement' || phase === 'initializing';
+  const isBattlePhase = phase === 'war' || phase === 'capital_battle';
+
   return (
     <div className="flex items-center justify-center gap-4">
       {/* Players */}
@@ -65,11 +77,21 @@ export function PlayerPanel({ players, currentPlayerId, roundNumber }: PlayerPan
         ))}
       </div>
 
-      {/* Battle Indicator */}
-      <BattleIndicator 
-        players={players} 
-        currentRound={Math.max(1, (roundNumber - 1) % 4 + 1)}
-      />
+      {/* Phase Indicator */}
+      {isSettlementPhase && (
+        <SettlementIndicator 
+          currentRound={roundNumber}
+          totalRounds={5}
+        />
+      )}
+      
+      {isBattlePhase && (
+        <BattleIndicator 
+          players={players} 
+          currentRound={phase === 'capital_battle' ? capitalBattleRound : 1}
+          totalRounds={phase === 'capital_battle' ? 3 : 4}
+        />
+      )}
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function BattleIndicator({
   return (
     <div className="bg-[#3d2b1f] rounded-lg p-3 shadow-lg border border-[#5a4030]">
       {/* Header */}
-      <h3 className="font-serif text-white text-sm mb-3 tracking-wide">Битка</h3>
+      <h3 className="font-serif text-white text-sm mb-3 tracking-wide">Битва</h3>
       
       {/* Rounds */}
       <div className="flex gap-2">
