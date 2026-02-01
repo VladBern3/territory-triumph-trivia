@@ -28,10 +28,10 @@ const regionCenters: Record<string, { x: number; y: number }> = {
 
 // Neighbor relationships based on SVG adjacencies
 const regionNeighbors: Record<string, string[]> = {
-  "region-1": ["region-2", "region-4", "region-5"],
+  "region-1": ["region-2", "region-5"],
   "region-2": ["region-1", "region-3", "region-4", "region-5"],
   "region-3": ["region-2", "region-4", "region-9", "region-10"],
-  "region-4": ["region-1", "region-2", "region-3", "region-5", "region-6", "region-7", "region-9", "region-8"],
+  "region-4": ["region-2", "region-3", "region-5", "region-6", "region-7", "region-9", "region-8"],
   "region-5": ["region-1", "region-4", "region-6"],
   "region-6": ["region-4", "region-5", "region-7"],
   "region-7": ["region-4", "region-6", "region-8"],
