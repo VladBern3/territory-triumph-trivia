@@ -97,7 +97,7 @@ export function CzechoslovakiaMap({
 
   // Handle capture animation and flag display
   // Refs to store timer IDs so we can clean them up
-  const flagTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const flagTimersRef = useRef<Map<string, { fadeOut?: NodeJS.Timeout; remove?: NodeJS.Timeout }>>(new Map());
   
   // Handle capture animation and flag display
   useEffect(() => {
@@ -105,10 +105,16 @@ export function CzechoslovakiaMap({
 
     const { territoryId, duration, startTime, playerId } = currentAnimation;
     
-    // Clear any existing timer for this territory
-    const existingTimer = flagTimersRef.current.get(territoryId);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
+    // Check if this is a capital - don't show flag for capitals
+    const territory = territories.find(t => t.id === territoryId);
+    if (territory?.isCapital) return;
+    
+    // Clear any existing timers for this territory
+    const existingTimers = flagTimersRef.current.get(territoryId);
+    if (existingTimers) {
+      if (existingTimers.fadeOut) clearTimeout(existingTimers.fadeOut);
+      if (existingTimers.remove) clearTimeout(existingTimers.remove);
+      flagTimersRef.current.delete(territoryId);
     }
     
     // Show flag for this territory (fade in)
@@ -130,7 +136,7 @@ export function CzechoslovakiaMap({
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        // Animation complete - start fade out after brief delay
+        // Animation complete - start fade out after 1 second
         const fadeOutTimer = setTimeout(() => {
           setVisibleFlags(current => {
             const updated = new Map(current);
@@ -141,7 +147,7 @@ export function CzechoslovakiaMap({
             return updated;
           });
           
-          // Remove flag completely after fade animation
+          // Remove flag completely after fade animation (400ms)
           const removeTimer = setTimeout(() => {
             setVisibleFlags(current => {
               const updated = new Map(current);
@@ -149,26 +155,17 @@ export function CzechoslovakiaMap({
               return updated;
             });
             flagTimersRef.current.delete(territoryId);
-          }, 500); // fade out duration
+          }, 400);
           
-          flagTimersRef.current.set(territoryId, removeTimer);
-        }, 300); // brief delay before fade starts
+          flagTimersRef.current.set(territoryId, { remove: removeTimer });
+        }, 1000); // 1 second visible before fade starts
         
-        flagTimersRef.current.set(territoryId, fadeOutTimer);
+        flagTimersRef.current.set(territoryId, { fadeOut: fadeOutTimer });
       }
     };
 
     requestAnimationFrame(animate);
-    
-    // Cleanup on unmount
-    return () => {
-      const timer = flagTimersRef.current.get(territoryId);
-      if (timer) {
-        clearTimeout(timer);
-        flagTimersRef.current.delete(territoryId);
-      }
-    };
-  }, [currentAnimation]);
+  }, [currentAnimation, territories]);
 
   // Apply styles to SVG paths
   useEffect(() => {
