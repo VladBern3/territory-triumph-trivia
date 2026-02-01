@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { initialTerritories } from '@/data/territories';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Copy, Check, Move, Save, Flag } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Move, Save, Flag, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CzechoslovakiaMap } from '@/components/game/CzechoslovakiaMap';
@@ -30,7 +30,9 @@ const MapDebug = () => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [currentAnimation, setCurrentAnimation] = useState<TerritoryAnimation | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [isSimulatingFlags, setIsSimulatingFlags] = useState(false);
+  const [isSimulatingCapitals, setIsSimulatingCapitals] = useState(false);
+  const [simulatedCapitals, setSimulatedCapitals] = useState<Territory[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedTerritory = territories.find(t => t.id === selectedTerritoryId);
@@ -98,15 +100,15 @@ const MapDebug = () => {
 
   // Simulate flag animations on all territories
   const simulateFlags = useCallback(() => {
-    if (isSimulating) return;
+    if (isSimulatingFlags) return;
     
-    setIsSimulating(true);
+    setIsSimulatingFlags(true);
     const territoryIds = territories.map(t => t.id);
     let index = 0;
     
     const animateNext = () => {
       if (index >= territoryIds.length) {
-        setIsSimulating(false);
+        setIsSimulatingFlags(false);
         setCurrentAnimation(null);
         return;
       }
@@ -129,7 +131,52 @@ const MapDebug = () => {
     };
     
     animateNext();
-  }, [isSimulating, territories]);
+  }, [isSimulatingFlags, territories]);
+
+  // Simulate capital animations on all territories
+  const simulateCapitals = useCallback(() => {
+    if (isSimulatingCapitals) return;
+    
+    setIsSimulatingCapitals(true);
+    setSimulatedCapitals([]);
+    
+    const territoryIds = territories.map(t => t.id);
+    let index = 0;
+    
+    const animateNext = () => {
+      if (index >= territoryIds.length) {
+        setIsSimulatingCapitals(false);
+        setCurrentAnimation(null);
+        // Clear simulated capitals after a delay
+        setTimeout(() => setSimulatedCapitals([]), 3000);
+        return;
+      }
+      
+      const territoryId = territoryIds[index];
+      const playerId = mockPlayers[index % mockPlayers.length].id;
+      
+      // Mark territory as capital for this simulation
+      setSimulatedCapitals(prev => [
+        ...prev, 
+        { ...territories.find(t => t.id === territoryId)!, isCapital: true, ownerId: playerId }
+      ]);
+      
+      // Start animation for this territory (as capital)
+      setCurrentAnimation({
+        territoryId,
+        playerId,
+        duration: 800,
+        startTime: Date.now(),
+        isCapital: true,
+      });
+      
+      index++;
+      // Stagger animations by 400ms (slightly longer for capitals)
+      setTimeout(animateNext, 400);
+    };
+    
+    animateNext();
+  }, [isSimulatingCapitals, territories]);
 
   // Copy all coordinates to clipboard
   const copyAllCoordinates = () => {
@@ -167,11 +214,21 @@ const MapDebug = () => {
             variant="default" 
             size="sm"
             onClick={simulateFlags}
-            disabled={isSimulating}
+            disabled={isSimulatingFlags || isSimulatingCapitals}
             className="bg-purple-600 hover:bg-purple-700"
           >
             <Flag className="w-4 h-4 mr-2" />
-            {isSimulating ? "Симуляция..." : "Симуляция флажков"}
+            {isSimulatingFlags ? "Симуляция..." : "Симуляция флажков"}
+          </Button>
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={simulateCapitals}
+            disabled={isSimulatingFlags || isSimulatingCapitals}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            <Crown className="w-4 h-4 mr-2" />
+            {isSimulatingCapitals ? "Симуляция..." : "Симуляция столиц"}
           </Button>
           <Button 
             variant={isDragMode ? "default" : "outline"} 
@@ -239,7 +296,13 @@ const MapDebug = () => {
       <div className="flex-1 p-4">
         <div className="relative w-full h-full">
           <CzechoslovakiaMap
-            territories={territories}
+            territories={simulatedCapitals.length > 0 
+              ? territories.map(t => {
+                  const simCap = simulatedCapitals.find(sc => sc.id === t.id);
+                  return simCap || t;
+                })
+              : territories
+            }
             players={mockPlayers}
             selectedTerritoryId={selectedTerritoryId}
             onTerritoryClick={setSelectedTerritoryId}
