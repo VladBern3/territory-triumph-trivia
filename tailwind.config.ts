@@ -126,10 +126,10 @@ export default {
           "100%": { transform: "translateY(-30px)", opacity: "0" },
         },
         "crown-appear": {
-          "0%": { opacity: "0", transform: "translateY(-30px) scale(0.5)" },
-          "60%": { opacity: "1", transform: "translateY(5px) scale(1.1)" },
-          "80%": { transform: "translateY(-2px) scale(1)" },
-          "100%": { transform: "translateY(0) scale(1)" },
+          "0%": { opacity: "0", transform: "scale(0.3)" },
+          "50%": { opacity: "1", transform: "scale(1.15)" },
+          "75%": { transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
       animation: {
