@@ -12,6 +12,28 @@ interface CzechoslovakiaMapProps {
   currentAnimation?: TerritoryAnimation | null;
 }
 
+// Territory center positions for attack indicator (approximate centers)
+const territoryCenters: Record<string, { x: number; y: number }> = {
+  'region-1': { x: 180, y: 180 },
+  'region-2': { x: 350, y: 150 },
+  'region-3': { x: 520, y: 120 },
+  'region-4': { x: 680, y: 130 },
+  'region-5': { x: 850, y: 110 },
+  'region-6': { x: 1020, y: 130 },
+  'region-7': { x: 1180, y: 180 },
+  'region-8': { x: 1350, y: 220 },
+  'region-9': { x: 180, y: 350 },
+  'region-10': { x: 350, y: 320 },
+  'region-11': { x: 520, y: 300 },
+  'region-12': { x: 680, y: 320 },
+  'region-13': { x: 850, y: 300 },
+  'region-14': { x: 1020, y: 320 },
+  'region-15': { x: 1180, y: 380 },
+  'region-16': { x: 1350, y: 420 },
+  'region-17': { x: 750, y: 500 },
+  'region-18': { x: 1100, y: 550 },
+};
+
 const playerColorValues: Record<string, string> = {
   red: 'hsl(0, 84%, 60%)',
   blue: 'hsl(217, 91%, 60%)',
@@ -36,6 +58,7 @@ export function CzechoslovakiaMap({
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [animationProgress, setAnimationProgress] = useState<Record<string, number>>({});
+  const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null);
 
   // Load SVG content
   useEffect(() => {
@@ -132,13 +155,15 @@ export function CzechoslovakiaMap({
         }
       };
 
-      // Hover effects
+      // Hover effects with attack indicator
       path.onmouseenter = () => {
-        if (isSelectable) {
+        if (isSelectable && selectableTerritories.length > 0) {
           path.style.filter = 'drop-shadow(0 0 8px rgba(255, 200, 50, 0.6)) brightness(1.1)';
+          setHoveredTerritory(territoryId);
         }
       };
       path.onmouseleave = () => {
+        setHoveredTerritory(null);
         if (isSelected) {
           path.style.filter = 'drop-shadow(0 0 12px hsl(38, 70%, 50%))';
         } else if (isHighlighted) {
@@ -161,6 +186,10 @@ export function CzechoslovakiaMap({
   // Get capitals with their owners for rendering crowns
   const capitals = territories.filter(t => t.isCapital && t.ownerId);
 
+  // Get hovered territory position for attack indicator
+  const hoveredTerritoryData = hoveredTerritory ? territories.find(t => t.id === hoveredTerritory) : null;
+  const hoveredCenter = hoveredTerritory ? territoryCenters[hoveredTerritory] : null;
+
   return (
     <div 
       className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden" 
@@ -181,6 +210,68 @@ export function CzechoslovakiaMap({
           }}
           dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
         />
+        
+        {/* Attack indicator arrow - 3D style */}
+        {hoveredCenter && selectableTerritories.length > 0 && selectableTerritories.includes(hoveredTerritory!) && (
+          <div
+            className="absolute pointer-events-none animate-bounce"
+            style={{
+              left: `${(hoveredCenter.x / 1499) * 100}%`,
+              top: `${(hoveredCenter.y / 717) * 100}%`,
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-20px',
+            }}
+          >
+            {/* 3D Arrow indicator */}
+            <div className="relative flex flex-col items-center">
+              {/* "АТАКА" label */}
+              <span 
+                className="text-xs font-bold text-white px-2 py-0.5 rounded mb-1 whitespace-nowrap"
+                style={{
+                  backgroundColor: 'hsl(0, 70%, 45%)',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                АТАКА
+              </span>
+              
+              {/* 3D Arrow */}
+              <svg 
+                width="40" 
+                height="50" 
+                viewBox="0 0 40 50" 
+                className="drop-shadow-lg"
+                style={{
+                  filter: 'drop-shadow(2px 4px 6px rgba(0,0,0,0.5))',
+                }}
+              >
+                {/* Arrow back face (3D effect) */}
+                <polygon 
+                  points="20,50 5,20 15,20 15,0 25,0 25,20 35,20" 
+                  fill="hsl(0, 60%, 35%)"
+                />
+                {/* Arrow front face */}
+                <polygon 
+                  points="20,46 8,18 16,18 16,2 24,2 24,18 32,18" 
+                  fill="hsl(0, 70%, 50%)"
+                />
+                {/* Arrow highlight */}
+                <polygon 
+                  points="16,2 24,2 24,18 32,18 20,46" 
+                  fill="url(#arrowGradient)"
+                  opacity="0.4"
+                />
+                <defs>
+                  <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="white" stopOpacity="0.6" />
+                    <stop offset="100%" stopColor="white" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+        )}
         
         {/* Capital crowns overlay */}
         {capitals.map(capital => {
