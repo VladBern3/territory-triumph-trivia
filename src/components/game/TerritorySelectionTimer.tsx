@@ -3,11 +3,12 @@ import { Timer, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TerritorySelectionTimerProps {
-  playerId: string; // Added to track player changes
+  playerId: string;
   playerName: string;
   playerColor: 'red' | 'blue' | 'green' | 'yellow';
   isActive: boolean;
-  duration?: number; // in seconds
+  duration?: number;
+  remainingSelections?: number; // Track how many selections left to reset timer
   onTimeout: () => void;
 }
 
@@ -31,18 +32,19 @@ export function TerritorySelectionTimer({
   playerColor,
   isActive,
   duration = 15,
+  remainingSelections = 1,
   onTimeout,
 }: TerritorySelectionTimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [hasTriggeredTimeout, setHasTriggeredTimeout] = useState(false);
 
-  // Reset timer when player changes or becomes active
+  // Reset timer when player changes, becomes active, or remaining selections change
   useEffect(() => {
     if (isActive) {
       setTimeLeft(duration);
       setHasTriggeredTimeout(false);
     }
-  }, [isActive, playerId, duration]);
+  }, [isActive, playerId, remainingSelections, duration]);
 
   // Countdown timer
   useEffect(() => {
