@@ -69,9 +69,10 @@ export function CzechoslovakiaMap({
     setTerritoryCenters(centers);
   }, []);
 
-  // Load SVG content
+  // Load SVG content with cache-busting
   useEffect(() => {
-    fetch('/map.svg')
+    const cacheBuster = `?v=${Date.now()}`;
+    fetch(`/map.svg${cacheBuster}`)
       .then(res => res.text())
       .then(text => setSvgContent(text))
       .catch(err => console.error('Failed to load map:', err));
