@@ -12,6 +12,7 @@ interface GameBoardProps {
   onSelectTarget: (territoryId: string) => void;
   attackableTerritories: string[];
   waitingForAnswers: boolean;
+  collectedAnswers?: Answer[];
 }
 
 export function GameBoard({
@@ -20,6 +21,7 @@ export function GameBoard({
   onSelectTarget,
   attackableTerritories,
   waitingForAnswers,
+  collectedAnswers = [],
 }: GameBoardProps) {
   const {
     phase,
@@ -156,6 +158,7 @@ export function GameBoard({
         capitalBattleRound={capitalBattleRound}
         currentPlayerId={currentTurnPlayerId}
         players={players}
+        collectedAnswers={collectedAnswers}
       />
     </div>
   );

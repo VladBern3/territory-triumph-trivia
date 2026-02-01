@@ -14,6 +14,7 @@ interface QuestionModalProps {
   capitalBattleRound?: number;
   currentPlayerId?: string | null;
   players: Player[];
+  collectedAnswers?: Answer[];
 }
 
 const playerBorderClasses: Record<string, string> = {
@@ -33,11 +34,17 @@ export function QuestionModal({
   capitalBattleRound = 0,
   currentPlayerId,
   players,
+  collectedAnswers = [],
 }: QuestionModalProps) {
   if (!question) return null;
 
   const isCapitalBattle = phase === 'capital_battle';
   const isSettlement = phase === 'settlement';
+  
+  // Calculate expected answer count based on phase
+  const expectedAnswerCount = isSettlement 
+    ? players.filter(p => !p.isEliminated).length 
+    : 2; // War phase: attacker and defender
 
   return (
     <Dialog open={isOpen} modal>
@@ -57,6 +64,9 @@ export function QuestionModal({
             playerId={currentPlayerId || players[0]?.id || ''}
             timeLimit={20}
             showHint={true}
+            collectedAnswers={collectedAnswers}
+            players={players}
+            expectedAnswerCount={expectedAnswerCount}
           />
         ) : (
           // War phase - show battle info and question
@@ -101,6 +111,9 @@ export function QuestionModal({
               onAnswer={onSubmitAnswer}
               playerId={attacker?.id || currentPlayerId || ''}
               timeLimit={15}
+              collectedAnswers={collectedAnswers}
+              players={players}
+              expectedAnswerCount={expectedAnswerCount}
             />
           </div>
         )}
