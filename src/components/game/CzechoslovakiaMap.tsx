@@ -50,8 +50,8 @@ export function CzechoslovakiaMap({
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [animationProgress, setAnimationProgress] = useState<Record<string, number>>({});
   const [territoryCenters, setTerritoryCenters] = useState<Record<string, TerritoryCenter>>({});
-  // Track territories that are being animated (for flag animation)
-  const [animatingFlags, setAnimatingFlags] = useState<Set<string>>(new Set());
+  // Track territories that should show flags (visible for 2 seconds after capture)
+  const [visibleFlags, setVisibleFlags] = useState<Map<string, { playerId: string; hideTimer: NodeJS.Timeout }>>(new Map());
 
   // Calculate territory centers from actual SVG path bounding boxes
   const calculateTerritoryCenters = useCallback(() => {
@@ -95,14 +95,32 @@ export function CzechoslovakiaMap({
     }
   }, [svgContent, calculateTerritoryCenters]);
 
-  // Handle capture animation
+  // Handle capture animation and flag display
   useEffect(() => {
     if (!currentAnimation) return;
 
-    const { territoryId, duration, startTime } = currentAnimation;
+    const { territoryId, duration, startTime, playerId } = currentAnimation;
     
-    // Mark this territory as animating for flag
-    setAnimatingFlags(prev => new Set(prev).add(territoryId));
+    // Show flag for this territory
+    setVisibleFlags(prev => {
+      const next = new Map(prev);
+      // Clear any existing timer
+      const existing = next.get(territoryId);
+      if (existing) {
+        clearTimeout(existing.hideTimer);
+      }
+      // Set up auto-hide after 2 seconds from animation end
+      const hideTimer = setTimeout(() => {
+        setVisibleFlags(current => {
+          const updated = new Map(current);
+          updated.delete(territoryId);
+          return updated;
+        });
+      }, duration + 2000); // Wait for animation to complete + 2 seconds visible
+      
+      next.set(territoryId, { playerId, hideTimer });
+      return next;
+    });
     
     const animate = () => {
       const elapsed = Date.now() - startTime;
@@ -115,19 +133,21 @@ export function CzechoslovakiaMap({
 
       if (progress < 1) {
         requestAnimationFrame(animate);
-      } else {
-        // Animation complete - remove from animating set after a delay
-        setTimeout(() => {
-          setAnimatingFlags(prev => {
-            const next = new Set(prev);
-            next.delete(territoryId);
-            return next;
-          });
-        }, 500);
       }
     };
 
     requestAnimationFrame(animate);
+    
+    // Cleanup on unmount
+    return () => {
+      setVisibleFlags(prev => {
+        const existing = prev.get(territoryId);
+        if (existing) {
+          clearTimeout(existing.hideTimer);
+        }
+        return prev;
+      });
+    };
   }, [currentAnimation]);
 
   // Apply styles to SVG paths
@@ -232,13 +252,15 @@ export function CzechoslovakiaMap({
     );
   }
 
+  // Get territories with visible flags (captured within last 2 seconds)
+  const territoriesWithFlags = Array.from(visibleFlags.entries()).map(([territoryId, data]) => {
+    const territory = territories.find(t => t.id === territoryId);
+    const owner = players.find(p => p.id === data.playerId);
+    return { territory, owner, territoryId };
+  }).filter(item => item.territory && item.owner);
+
   // Get capitals with their owners for rendering crowns
   const capitals = territories.filter(t => t.isCapital && t.ownerId);
-  
-  // Get owned non-capital territories for flag rendering (settlement phase only)
-  const ownedNonCapitalTerritories = gamePhase === 'settlement' 
-    ? territories.filter(t => t.ownerId && !t.isCapital)
-    : [];
 
   return (
     <div 
@@ -291,21 +313,19 @@ export function CzechoslovakiaMap({
           <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
         </svg>
         
-        {/* Territory flags for owned non-capital territories (settlement phase) */}
-        {ownedNonCapitalTerritories.map(territory => {
-          const owner = players.find(p => p.id === territory.ownerId);
-          if (!owner) return null;
+        {/* Territory flags - visible for 2 seconds after capture */}
+        {territoriesWithFlags.map(({ territory, owner, territoryId }) => {
+          if (!territory || !owner) return null;
           
-          const center = territoryCenters[territory.id];
+          const center = territoryCenters[territoryId];
           if (!center) return null;
           
           const xPercent = (center.x / 1499) * 100;
           const yPercent = (center.y / 717) * 100;
-          const isAnimating = animatingFlags.has(territory.id);
           
           return (
             <div
-              key={`flag-${territory.id}`}
+              key={`flag-${territoryId}`}
               className="absolute pointer-events-none"
               style={{
                 left: `${xPercent}%`,
@@ -316,7 +336,7 @@ export function CzechoslovakiaMap({
               <TerritoryFlag 
                 color={owner.color}
                 colorValue={playerColorValues[owner.color]}
-                isAnimating={isAnimating}
+                isAnimating={true}
               />
             </div>
           );
