@@ -57,6 +57,8 @@ export function useMultiplayer() {
     capitalBattleRound: 0,
     winner: null,
     currentAnimation: null,
+    settlementSelections: [],
+    isSelectingSettlementTerritory: false,
   });
   
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -86,6 +88,8 @@ export function useMultiplayer() {
       capitalBattleRound: session.capital_battle_round || 0,
       winner: parseJsonObject<Player>(session.winner),
       currentAnimation: parseJsonObject<TerritoryAnimation>(session.current_animation),
+      settlementSelections: [],
+      isSelectingSettlementTerritory: false,
     });
   }, []);
 
@@ -332,6 +336,8 @@ export function useMultiplayer() {
       capitalBattleRound: 0,
       winner: null,
       currentAnimation: null,
+      settlementSelections: [],
+      isSelectingSettlementTerritory: false,
     });
   };
 

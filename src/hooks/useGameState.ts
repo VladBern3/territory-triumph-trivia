@@ -36,6 +36,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
     capitalBattleRound: 0,
     winner: null,
     currentAnimation: null,
+    settlementSelections: [],
+    isSelectingSettlementTerritory: false,
   });
 
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -201,8 +203,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
     }
   }, [answers, gameState.phase, gameState.currentQuestion, gameState.players, isShowingResults]);
 
-  // Process settlement phase answers
-  const processSettlementAnswers = useCallback(async (submittedAnswers: Answer[], question: Question) => {
+  // Process settlement phase answers - prepare for territory selection
+  const processSettlementAnswers = useCallback((submittedAnswers: Answer[], question: Question) => {
     const correctAnswer = Number(question.correctAnswer);
     console.log('Correct answer:', correctAnswer);
     
@@ -216,81 +218,36 @@ export function useGameState(questionProviders?: QuestionProviders) {
 
     console.log('Sorted answers:', sorted.map(s => ({ playerId: s.playerId, answer: s.answer, dist: Math.abs(Number(s.answer) - correctAnswer) })));
 
+    // Create settlement selections based on ranking
+    // 1st place: 2 territories, 2nd place: 1 territory, 3rd+: 0 territories
+    const selections: { playerId: string; rank: number; territoriesRemaining: number }[] = [];
+    
+    if (sorted[0]) {
+      selections.push({ playerId: sorted[0].playerId, rank: 1, territoriesRemaining: 2 });
+    }
+    if (sorted[1]) {
+      selections.push({ playerId: sorted[1].playerId, rank: 2, territoriesRemaining: 1 });
+    }
+    // 3rd place gets nothing, so we don't add them
+
     // Clear answers and reset showing results flag
     setAnswers([]);
     setIsShowingResults(false);
 
-    // Get current neutral territories from state
-    let currentTerritories = [...gameState.territories];
-    
-    // First place gets 2 territories
-    if (sorted[0]) {
-      let available = currentTerritories.filter(t => t.ownerId === null);
-      console.log('First place:', sorted[0].playerId, 'available territories:', available.length);
-      
-      if (available.length > 0) {
-        await animateCapture(available[0].id, sorted[0].playerId, false);
-        currentTerritories = currentTerritories.map(t => 
-          t.id === available[0].id ? { ...t, ownerId: sorted[0].playerId } : t
-        );
-      }
-      
-      // Second territory for first place
-      available = currentTerritories.filter(t => t.ownerId === null);
-      if (available.length > 0) {
-        await animateCapture(available[0].id, sorted[0].playerId, false);
-        currentTerritories = currentTerritories.map(t => 
-          t.id === available[0].id ? { ...t, ownerId: sorted[0].playerId } : t
-        );
-      }
-    }
-    
-    // Second place gets 1 territory
-    if (sorted[1]) {
-      const available = currentTerritories.filter(t => t.ownerId === null);
-      console.log('Second place:', sorted[1].playerId, 'available territories:', available.length);
-      
-      if (available.length > 0) {
-        await animateCapture(available[0].id, sorted[1].playerId, false);
-        currentTerritories = currentTerritories.map(t => 
-          t.id === available[0].id ? { ...t, ownerId: sorted[1].playerId } : t
-        );
-      }
-    }
-    
-    // Third place gets nothing
-    console.log('Third place gets nothing');
-    
-    // After all animations, move to next round
+    // Transition to territory selection mode
     setGameState(prev => {
-      const stillNeutral = prev.territories.filter(t => t.ownerId === null);
-      const newRound = prev.roundNumber + 1;
-      
-      // Settlement lasts 5 rounds, then switch to war
-      const newPhase = newRound > 5 || stillNeutral.length <= 1 ? 'war' : 'settlement';
-      
-      console.log('Settlement round complete. Neutral left:', stillNeutral.length, 'New phase:', newPhase, 'Round:', newRound);
-      
-      // Get next question - only for settlement phase, war phase gets question after target selection
-      const nextQuestion = newPhase === 'war' 
-        ? null  // No question yet - will be set when target is selected
-        : getNumericQuestion();
-      
-      const activePlayers = prev.players.filter(p => !p.isEliminated);
-      const nextPlayer = activePlayers[newRound % activePlayers.length];
+      // Find the first player who needs to select
+      const firstSelector = selections.find(s => s.territoriesRemaining > 0);
       
       return {
         ...prev,
-        phase: newPhase,
-        currentQuestion: nextQuestion,
-        roundNumber: newRound,
-        currentTurnPlayerId: nextPlayer?.id || null,
-        attackingPlayerId: null,
-        defendingPlayerId: null,
-        targetTerritoryId: null,
+        currentQuestion: null, // Hide the question modal
+        settlementSelections: selections,
+        isSelectingSettlementTerritory: true,
+        currentTurnPlayerId: firstSelector?.playerId || null,
       };
     });
-  }, [animateCapture, gameState.territories, getChoiceQuestion, getNumericQuestion]);
+  }, []);
 
   const processWarAnswers = (submittedAnswers: Answer[], question: Question) => {
     const correctAnswer = question.correctAnswer;
@@ -408,6 +365,71 @@ export function useGameState(questionProviders?: QuestionProviders) {
     });
   };
 
+  // Select territory during settlement phase
+  const selectSettlementTerritory = useCallback(async (territoryId: string) => {
+    const territory = gameState.territories.find(t => t.id === territoryId);
+    if (!territory || territory.ownerId !== null) {
+      return; // Can only select neutral territories
+    }
+
+    const currentSelector = gameState.settlementSelections.find(
+      s => s.playerId === gameState.currentTurnPlayerId && s.territoriesRemaining > 0
+    );
+    
+    if (!currentSelector) return;
+
+    // Animate the capture
+    await animateCapture(territoryId, currentSelector.playerId, false);
+
+    // Update selections and move to next selector or next round
+    setGameState(prev => {
+      const updatedSelections = prev.settlementSelections.map(s => 
+        s.playerId === currentSelector.playerId
+          ? { ...s, territoriesRemaining: s.territoriesRemaining - 1 }
+          : s
+      );
+
+      // Find the next player who still needs to select
+      const nextSelector = updatedSelections.find(s => s.territoriesRemaining > 0);
+      
+      if (nextSelector) {
+        // More selections to make
+        return {
+          ...prev,
+          settlementSelections: updatedSelections,
+          currentTurnPlayerId: nextSelector.playerId,
+        };
+      }
+      
+      // All selections done - move to next round
+      const stillNeutral = prev.territories.filter(t => t.ownerId === null);
+      const newRound = prev.roundNumber + 1;
+      
+      // Settlement lasts 5 rounds, then switch to war
+      const newPhase = newRound > 5 || stillNeutral.length === 0 ? 'war' : 'settlement';
+      
+      console.log('Settlement round complete. Neutral left:', stillNeutral.length, 'New phase:', newPhase, 'Round:', newRound);
+      
+      // Get next question - only for settlement phase
+      const nextQuestion = newPhase === 'war' 
+        ? null
+        : getNumericQuestion();
+      
+      const activePlayers = prev.players.filter(p => !p.isEliminated);
+      const nextPlayer = activePlayers[newRound % activePlayers.length];
+      
+      return {
+        ...prev,
+        phase: newPhase,
+        currentQuestion: nextQuestion,
+        roundNumber: newRound,
+        currentTurnPlayerId: nextPlayer?.id || null,
+        settlementSelections: [],
+        isSelectingSettlementTerritory: false,
+      };
+    });
+  }, [gameState.territories, gameState.settlementSelections, gameState.currentTurnPlayerId, animateCapture, getNumericQuestion]);
+
   // Select target for attack
   const selectAttackTarget = useCallback((territoryId: string) => {
     const territory = gameState.territories.find(t => t.id === territoryId);
@@ -466,6 +488,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
       capitalBattleRound: 0,
       winner: null,
       currentAnimation: null,
+      settlementSelections: [],
+      isSelectingSettlementTerritory: false,
     });
     setAnswers([]);
   }, []);
@@ -475,6 +499,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     startGame,
     submitAnswer,
     selectAttackTarget,
+    selectSettlementTerritory,
     getAttackableTerritories,
     resetGame,
     neutralTerritories,

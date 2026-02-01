@@ -36,6 +36,12 @@ export interface Question {
   hint?: string;
 }
 
+export interface SettlementSelection {
+  playerId: string;
+  rank: number; // 1, 2, or 3
+  territoriesRemaining: number; // How many they can still pick
+}
+
 export interface GameState {
   phase: 'lobby' | 'initializing' | 'settlement' | 'war' | 'capital_battle' | 'game_over';
   players: Player[];
@@ -49,6 +55,9 @@ export interface GameState {
   capitalBattleRound: number; // 1, 2, or 3 for capital battles
   winner: Player | null;
   currentAnimation: TerritoryAnimation | null;
+  // Settlement phase specific
+  settlementSelections: SettlementSelection[];
+  isSelectingSettlementTerritory: boolean;
 }
 
 export interface Answer {

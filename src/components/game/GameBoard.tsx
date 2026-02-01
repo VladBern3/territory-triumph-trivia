@@ -1,16 +1,18 @@
-import { GameState, Answer } from '@/types/game';
+import { GameState, Answer, SettlementSelection } from '@/types/game';
 import { CzechMap } from './CzechMap';
 import { PlayerPanel } from './PlayerPanel';
 import { QuestionModal } from './QuestionModal';
 import { BattleInfo } from './BattleInfo';
-import { Swords, Target, Loader2 } from 'lucide-react';
+import { Swords, Target, Loader2, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
   gameState: GameState;
   onSubmitAnswer: (answer: Answer) => void;
   onSelectTarget: (territoryId: string) => void;
+  onSelectSettlementTerritory: (territoryId: string) => void;
   attackableTerritories: string[];
+  selectableSettlementTerritories: string[];
   waitingForAnswers: boolean;
   collectedAnswers?: Answer[];
 }
@@ -19,7 +21,9 @@ export function GameBoard({
   gameState,
   onSubmitAnswer,
   onSelectTarget,
+  onSelectSettlementTerritory,
   attackableTerritories,
+  selectableSettlementTerritories,
   waitingForAnswers,
   collectedAnswers = [],
 }: GameBoardProps) {
@@ -35,6 +39,8 @@ export function GameBoard({
     roundNumber,
     capitalBattleRound,
     currentAnimation,
+    isSelectingSettlementTerritory,
+    settlementSelections,
   } = gameState;
 
   const currentPlayer = players.find(p => p.id === currentTurnPlayerId);
@@ -43,11 +49,28 @@ export function GameBoard({
   const targetTerritory = territories.find(t => t.id === targetTerritoryId);
 
   const isInitializing = phase === 'initializing';
-  const isSelectingTarget = phase === 'war' && !targetTerritoryId && currentTurnPlayerId;
+  const isSelectingWarTarget = phase === 'war' && !targetTerritoryId && currentTurnPlayerId && !isSelectingSettlementTerritory;
   const isBattleActive = (phase === 'war' || phase === 'capital_battle') && targetTerritoryId;
   
+  // Get current selector info for settlement
+  const currentSelector = settlementSelections.find(s => s.playerId === currentTurnPlayerId && s.territoriesRemaining > 0);
+  
   // Show question modal when there's a question and not selecting target and not initializing
-  const showQuestionModal = currentQuestion && !isSelectingTarget && !isInitializing;
+  const showQuestionModal = currentQuestion && !isSelectingWarTarget && !isInitializing && !isSelectingSettlementTerritory;
+
+  // Determine which territories are selectable
+  const selectableTerritories = isSelectingSettlementTerritory 
+    ? selectableSettlementTerritories 
+    : isSelectingWarTarget 
+      ? attackableTerritories 
+      : [];
+
+  // Determine click handler
+  const handleTerritoryClick = isSelectingSettlementTerritory
+    ? onSelectSettlementTerritory
+    : isSelectingWarTarget
+      ? onSelectTarget
+      : () => {};
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden parchment-texture">
@@ -63,7 +86,8 @@ export function GameBoard({
         <div className="bg-card/90 backdrop-blur-sm px-4 py-2 rounded-lg medieval-border">
           <p className="text-sm text-muted-foreground">
             {phase === 'initializing' && 'Распределение территорий...'}
-            {phase === 'settlement' && 'Фаза расселения'}
+            {phase === 'settlement' && !isSelectingSettlementTerritory && 'Фаза расселения'}
+            {phase === 'settlement' && isSelectingSettlementTerritory && 'Выбор территорий'}
             {phase === 'war' && 'Фаза войны'}
             {phase === 'capital_battle' && 'Битва за столицу!'}
           </p>
@@ -85,7 +109,7 @@ export function GameBoard({
       )}
 
       {/* Battle Info - top left when active */}
-      {(phase === 'settlement' || isBattleActive) && !isInitializing && (
+      {(phase === 'settlement' || isBattleActive) && !isInitializing && !isSelectingSettlementTerritory && (
         <div className="absolute top-4 left-4 z-10">
           <BattleInfo
             phase={phase}
@@ -106,15 +130,33 @@ export function GameBoard({
           territories={territories}
           players={players}
           selectedTerritoryId={targetTerritoryId}
-          onTerritoryClick={isSelectingTarget ? onSelectTarget : () => {}}
-          selectableTerritories={isSelectingTarget ? attackableTerritories : []}
+          onTerritoryClick={handleTerritoryClick}
+          selectableTerritories={selectableTerritories}
           highlightedTerritories={isBattleActive && targetTerritoryId ? [targetTerritoryId] : []}
           currentAnimation={currentAnimation}
         />
       </div>
 
-      {/* Target Selection Prompt - floating above players */}
-      {isSelectingTarget && (
+      {/* Settlement Territory Selection Prompt */}
+      {isSelectingSettlementTerritory && currentSelector && (
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-10 animate-fade-in">
+          <div className={cn(
+            "bg-primary/90 backdrop-blur-sm text-primary-foreground px-6 py-3 rounded-lg shadow-lg",
+            "flex items-center gap-3"
+          )}>
+            <MapPin className="w-5 h-5 animate-pulse" />
+            <p className="font-display">
+              <span className="font-semibold">{currentPlayer?.name}</span>, выберите территорию 
+              <span className="ml-1 text-sm opacity-80">
+                (осталось: {currentSelector.territoriesRemaining})
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* War Target Selection Prompt */}
+      {isSelectingWarTarget && (
         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-10 animate-fade-in">
           <div className={cn(
             "bg-primary/90 backdrop-blur-sm text-primary-foreground px-6 py-3 rounded-lg shadow-lg",
