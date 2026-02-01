@@ -89,18 +89,18 @@ export function AnswerResultsDisplay({
       revealTimers.push(timer);
     }
 
-    // Show correct answer 2 seconds after last player answer
+    // Show correct answer 1 second after last player answer
     const correctAnswerTimer = setTimeout(() => {
       setShowCorrectAnswer(true);
-    }, totalAnswers * 1000 + 2000);
+    }, totalAnswers * 1000 + 1000);
 
-    // Call onComplete 3 seconds after correct answer is shown (total: answers + 2s + 3s)
+    // Call onComplete 3 seconds after correct answer is shown (total: answers + 1s + 3s)
     const completeTimer = setTimeout(() => {
       if (onComplete && !hasCalledComplete.current) {
         hasCalledComplete.current = true;
         onComplete();
       }
-    }, totalAnswers * 1000 + 5000);
+    }, totalAnswers * 1000 + 4000);
 
     return () => {
       revealTimers.forEach(t => clearTimeout(t));
@@ -188,7 +188,7 @@ export function AnswerResultsDisplay({
         })}
       </div>
 
-      {/* Correct answer - appears 2 seconds after last player answer */}
+      {/* Correct answer - appears 1 second after last player answer */}
       <div className={cn(
         "flex justify-center transition-all duration-700",
         showCorrectAnswer 
