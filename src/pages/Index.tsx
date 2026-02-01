@@ -94,7 +94,7 @@ const Index = () => {
   useEffect(() => {
     if (!isSinglePlayer) return;
     
-    const { currentQuestion, phase: currentPhase, attackingPlayerId, defendingPlayerId } = localGame.gameState;
+    const { currentQuestion, phase: currentPhase, attackingPlayerId, defendingPlayerId, players } = localGame.gameState;
     if (!currentQuestion) return;
     
     // Get bots that should answer this question
@@ -102,16 +102,19 @@ const Index = () => {
     
     if (currentPhase === 'settlement') {
       // All bots answer in settlement phase
-      botsToAnswer = localGame.gameState.players.filter(p => p.isBot && !p.isEliminated);
+      botsToAnswer = players.filter(p => p.isBot && !p.isEliminated);
     } else if (currentPhase === 'war' || currentPhase === 'capital_battle') {
       // Only bots involved in battle answer
-      botsToAnswer = localGame.gameState.players.filter(p => 
+      botsToAnswer = players.filter(p => 
         p.isBot && !p.isEliminated && 
         (p.id === attackingPlayerId || p.id === defendingPlayerId)
       );
     }
     
     if (botsToAnswer.length > 0) {
+      // Cancel any existing bot answers before scheduling new ones
+      botPlayer.cancelPendingAnswers();
+      
       botPlayer.scheduleBotAnswers(
         botsToAnswer,
         currentQuestion,
@@ -123,7 +126,7 @@ const Index = () => {
     return () => {
       botPlayer.cancelPendingAnswers();
     };
-  }, [isSinglePlayer, localGame.gameState.currentQuestion, localGame.gameState.phase, botPlayer, localGame]);
+  }, [isSinglePlayer, localGame.gameState.currentQuestion?.id, localGame.gameState.phase, botPlayer, localGame]);
 
   // Auto-select attack target for bot's turn in war phase
   useEffect(() => {
