@@ -123,6 +123,12 @@ export function QuestionCard({
   const timerPercentage = (timeLeft / timeLimit) * 100;
   const timerColor = timeLeft <= 3 ? 'bg-destructive' : timeLeft <= 6 ? 'bg-primary' : 'bg-green-500';
 
+  // Handle results complete - this will trigger the next phase
+  const handleResultsComplete = () => {
+    // Results are done displaying, the game hook will handle the transition
+    console.log('[QuestionCard] Results display complete');
+  };
+
   // Show results view when all answers are collected
   if (showResults && collectedAnswers.length > 0) {
     return (
@@ -138,6 +144,7 @@ export function QuestionCard({
             players={players}
             question={question}
             questionStartTime={questionStartTime}
+            onComplete={handleResultsComplete}
           />
         </CardContent>
       </Card>
