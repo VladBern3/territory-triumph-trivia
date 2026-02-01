@@ -105,9 +105,10 @@ export function CzechoslovakiaMap({
 
     const { territoryId, duration, startTime, playerId } = currentAnimation;
     
-    // Check if this is a capital - don't show flag for capitals
+    // Don't show flags for capitals or during capital distribution phase
     const territory = territories.find(t => t.id === territoryId);
-    if (territory?.isCapital) return;
+    const isCapitalDistribution = gamePhase !== 'settlement' && gamePhase !== 'war' && gamePhase !== 'capital_battle';
+    if (territory?.isCapital || isCapitalDistribution) return;
     
     // Clear any existing timers for this territory
     const existingTimers = flagTimersRef.current.get(territoryId);
