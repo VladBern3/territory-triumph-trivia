@@ -271,9 +271,9 @@ export function useGameState(questionProviders?: QuestionProviders) {
       
       console.log('Settlement round complete. Neutral left:', stillNeutral.length, 'New phase:', newPhase, 'Round:', newRound);
       
-      // Get next question
+      // Get next question - only for settlement phase, war phase gets question after target selection
       const nextQuestion = newPhase === 'war' 
-        ? getChoiceQuestion()
+        ? null  // No question yet - will be set when target is selected
         : getNumericQuestion();
       
       const activePlayers = prev.players.filter(p => !p.isEliminated);
@@ -318,8 +318,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     
     setGameState(prev => {
       if (!attackerWins) {
-        // Attack failed
-        const nextQuestion = getChoiceQuestion();
+        // Attack failed - next player's turn, no question until they select target
         setAnswers([]);
         
         const activePlayers = prev.players.filter(p => !p.isEliminated);
@@ -328,7 +327,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
         
         return {
           ...prev,
-          currentQuestion: nextQuestion,
+          currentQuestion: null, // No question until target selected
           currentTurnPlayerId: nextPlayer.id,
           attackingPlayerId: null,
           defendingPlayerId: null,
@@ -389,7 +388,6 @@ export function useGameState(questionProviders?: QuestionProviders) {
         };
       }
       
-      const nextQuestion = getChoiceQuestion();
       setAnswers([]);
       
       const currentIndex = activePlayers.findIndex(p => p.id === prev.currentTurnPlayerId);
@@ -400,7 +398,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
         territories: newTerritories,
         players: newPlayers,
         phase: 'war',
-        currentQuestion: nextQuestion,
+        currentQuestion: null, // No question until target selected
         currentTurnPlayerId: nextPlayer.id,
         attackingPlayerId: null,
         defendingPlayerId: null,
@@ -419,15 +417,19 @@ export function useGameState(questionProviders?: QuestionProviders) {
     
     const isCapital = territory.isCapital;
     
+    // Get question for the battle
+    const battleQuestion = getChoiceQuestion();
+    
     setGameState(prev => ({
       ...prev,
       phase: isCapital ? 'capital_battle' : 'war',
+      currentQuestion: battleQuestion,
       attackingPlayerId: prev.currentTurnPlayerId,
       defendingPlayerId: territory.ownerId,
       targetTerritoryId: territoryId,
       capitalBattleRound: isCapital ? 1 : 0,
     }));
-  }, [gameState.territories, gameState.currentTurnPlayerId]);
+  }, [gameState.territories, gameState.currentTurnPlayerId, getChoiceQuestion]);
 
   // Get attackable territories
   const getAttackableTerritories = useCallback(() => {
