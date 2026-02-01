@@ -5,11 +5,16 @@ import { GameOverScreen } from '@/components/game/GameOverScreen';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useGameState } from '@/hooks/useGameState';
 import { useBotPlayer } from '@/hooks/useBotPlayer';
+import { useQuestions } from '@/hooks/useQuestions';
 import { Player, Answer } from '@/types/game';
 
 const Index = () => {
   const multiplayer = useMultiplayer();
-  const localGame = useGameState();
+  const questions = useQuestions();
+  const localGame = useGameState({
+    getRandomNumericQuestion: questions.getRandomNumericQuestion,
+    getRandomChoiceQuestion: questions.getRandomChoiceQuestion,
+  });
   const botPlayer = useBotPlayer();
   const [isSinglePlayer, setIsSinglePlayer] = useState(false);
   const humanPlayerIdRef = useRef<string | null>(null);
@@ -50,12 +55,18 @@ const Index = () => {
   const handleStartGame = useCallback(async () => {
     if (!isHost || players.length < 2) return;
     
+    // Ensure questions are loaded before starting
+    await questions.loadQuestions();
+    
     // Use localGame to start and sync state
     localGame.startGame(players.map(p => ({ id: p.id, name: p.name, color: p.color, isBot: p.isBot })));
-  }, [isHost, players, localGame]);
+  }, [isHost, players, localGame, questions]);
 
   // Handle starting single player game with bots
-  const handleStartSinglePlayer = useCallback((playerName: string) => {
+  const handleStartSinglePlayer = useCallback(async (playerName: string) => {
+    // Ensure questions are loaded before starting
+    await questions.loadQuestions();
+    
     const humanPlayer = {
       id: `player_${Date.now()}`,
       name: playerName,
@@ -70,7 +81,7 @@ const Index = () => {
     
     setIsSinglePlayer(true);
     localGame.startGame([humanPlayer, ...bots]);
-  }, [botPlayer, localGame]);
+  }, [botPlayer, localGame, questions]);
 
   // Sync local game state changes to multiplayer session
   useEffect(() => {
@@ -183,8 +194,9 @@ const Index = () => {
     setIsSinglePlayer(false);
     humanPlayerIdRef.current = null;
     botPlayer.cancelPendingAnswers();
+    questions.resetUsedQuestions();
     localGame.resetGame();
-  }, [isInSession, leaveSession, localGame, botPlayer]);
+  }, [isInSession, leaveSession, localGame, botPlayer, questions]);
 
   // Waiting room / Lobby - check if not in active game or multiplayer waiting
   const isWaitingPhase = phase === 'lobby' || (mpGameState.phase as string) === 'waiting';
