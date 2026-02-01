@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Territory, Player, TerritoryAnimation } from '@/types/game';
 import { Crown } from 'lucide-react';
 
@@ -12,27 +12,11 @@ interface CzechoslovakiaMapProps {
   currentAnimation?: TerritoryAnimation | null;
 }
 
-// Territory center positions for attack indicator (approximate centers)
-const territoryCenters: Record<string, { x: number; y: number }> = {
-  'region-1': { x: 180, y: 180 },
-  'region-2': { x: 350, y: 150 },
-  'region-3': { x: 520, y: 120 },
-  'region-4': { x: 680, y: 130 },
-  'region-5': { x: 850, y: 110 },
-  'region-6': { x: 1020, y: 130 },
-  'region-7': { x: 1180, y: 180 },
-  'region-8': { x: 1350, y: 220 },
-  'region-9': { x: 180, y: 350 },
-  'region-10': { x: 350, y: 320 },
-  'region-11': { x: 520, y: 300 },
-  'region-12': { x: 680, y: 320 },
-  'region-13': { x: 850, y: 300 },
-  'region-14': { x: 1020, y: 320 },
-  'region-15': { x: 1180, y: 380 },
-  'region-16': { x: 1350, y: 420 },
-  'region-17': { x: 750, y: 500 },
-  'region-18': { x: 1100, y: 550 },
-};
+// Dynamic territory centers calculated from SVG path bounding boxes
+interface TerritoryCenter {
+  x: number;
+  y: number;
+}
 
 const playerColorValues: Record<string, string> = {
   red: 'hsl(0, 84%, 60%)',
@@ -42,9 +26,9 @@ const playerColorValues: Record<string, string> = {
 };
 
 const neutralColor = 'hsl(38, 25%, 85%)';
-const gapColor = 'transparent'; // Transparent borders
+const gapColor = 'transparent';
 const selectedStrokeColor = 'hsl(38, 70%, 50%)';
-const mapBackgroundColor = 'hsl(220, 60%, 20%)'; // Dark blue background
+const mapBackgroundColor = 'hsl(220, 60%, 20%)';
 
 export function CzechoslovakiaMap({
   territories,
@@ -59,6 +43,31 @@ export function CzechoslovakiaMap({
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [animationProgress, setAnimationProgress] = useState<Record<string, number>>({});
   const [hoveredTerritory, setHoveredTerritory] = useState<string | null>(null);
+  const [territoryCenters, setTerritoryCenters] = useState<Record<string, TerritoryCenter>>({});
+
+  // Calculate territory centers from actual SVG path bounding boxes
+  const calculateTerritoryCenters = useCallback(() => {
+    if (!svgRef.current) return;
+    
+    const paths = svgRef.current.querySelectorAll('path');
+    const centers: Record<string, TerritoryCenter> = {};
+    
+    paths.forEach((path, index) => {
+      const territoryId = `region-${index + 1}`;
+      try {
+        const bbox = path.getBBox();
+        centers[territoryId] = {
+          x: bbox.x + bbox.width / 2,
+          y: bbox.y + bbox.height / 2,
+        };
+      } catch (e) {
+        // Fallback if getBBox fails
+        centers[territoryId] = { x: 400, y: 300 };
+      }
+    });
+    
+    setTerritoryCenters(centers);
+  }, []);
 
   // Load SVG content
   useEffect(() => {
@@ -67,6 +76,15 @@ export function CzechoslovakiaMap({
       .then(text => setSvgContent(text))
       .catch(err => console.error('Failed to load map:', err));
   }, []);
+
+  // Calculate centers after SVG is loaded and rendered
+  useEffect(() => {
+    if (svgContent && svgRef.current) {
+      // Small delay to ensure SVG is fully rendered
+      const timer = setTimeout(calculateTerritoryCenters, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [svgContent, calculateTerritoryCenters]);
 
   // Handle capture animation
   useEffect(() => {
@@ -279,9 +297,12 @@ export function CzechoslovakiaMap({
           const owner = players.find(p => p.id === capital.ownerId);
           if (!owner) return null;
           
-          // Calculate position as percentage of viewBox - centered on territory
-          const xPercent = (capital.position.x / 1499) * 100;
-          const yPercent = (capital.position.y / 717) * 100;
+          // Use dynamically calculated center from SVG bounding box
+          const center = territoryCenters[capital.id];
+          if (!center) return null;
+          
+          const xPercent = (center.x / 1499) * 100;
+          const yPercent = (center.y / 717) * 100;
           
           return (
             <div
@@ -290,7 +311,7 @@ export function CzechoslovakiaMap({
               style={{
                 left: `${xPercent}%`,
                 top: `${yPercent}%`,
-                transform: 'translate(-50%, -50%)', // Center on the territory
+                transform: 'translate(-50%, -50%)',
               }}
             >
               {/* Player name above crown */}
