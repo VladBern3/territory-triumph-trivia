@@ -22,7 +22,7 @@ export function QuestionCard({
   question,
   onAnswer,
   playerId,
-  timeLimit = 15,
+  timeLimit = 10,
   showHint = false,
   collectedAnswers = [],
   players = [],
@@ -34,6 +34,17 @@ export function QuestionCard({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const questionStartTimeRef = useRef(Date.now());
+  const numericAnswerRef = useRef('');
+  const selectedOptionRef = useRef<string | null>(null);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    numericAnswerRef.current = numericAnswer;
+  }, [numericAnswer]);
+
+  useEffect(() => {
+    selectedOptionRef.current = selectedOption;
+  }, [selectedOption]);
 
   // Reset state when question changes
   useEffect(() => {
@@ -43,6 +54,8 @@ export function QuestionCard({
     setIsSubmitted(false);
     setShowResults(false);
     questionStartTimeRef.current = Date.now();
+    numericAnswerRef.current = '';
+    selectedOptionRef.current = null;
   }, [question.id, timeLimit]);
 
   // Check if all answers are collected
@@ -52,14 +65,15 @@ export function QuestionCard({
     }
   }, [collectedAnswers.length, expectedAnswerCount]);
 
-  // Timer runs until submitted or time runs out
+  // Timer runs independently - only stops when showing results
   useEffect(() => {
-    if (isSubmitted || showResults) return;
+    if (showResults) return;
     
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          handleSubmit();
+          // Time's up - auto-submit with current input value
+          handleAutoSubmit();
           return 0;
         }
         return prev - 1;
@@ -67,7 +81,23 @@ export function QuestionCard({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isSubmitted, showResults]);
+  }, [showResults, question.id]);
+
+  // Auto-submit when timer expires (uses refs to get current values)
+  const handleAutoSubmit = () => {
+    if (isSubmitted) return;
+    setIsSubmitted(true);
+    
+    const answer: Answer = {
+      playerId,
+      answer: question.type === 'numeric' 
+        ? Number(numericAnswerRef.current) || 0 
+        : (selectedOptionRef.current || ''),
+      timestamp: Date.now(),
+    };
+    
+    onAnswer(answer);
+  };
 
   const handleSubmit = () => {
     if (isSubmitted) return;
@@ -88,7 +118,7 @@ export function QuestionCard({
   };
 
   const timerPercentage = (timeLeft / timeLimit) * 100;
-  const timerColor = timeLeft <= 5 ? 'bg-destructive' : timeLeft <= 10 ? 'bg-primary' : 'bg-green-500';
+  const timerColor = timeLeft <= 3 ? 'bg-destructive' : timeLeft <= 6 ? 'bg-primary' : 'bg-green-500';
 
   // Show results view when all answers are collected
   if (showResults && collectedAnswers.length > 0) {

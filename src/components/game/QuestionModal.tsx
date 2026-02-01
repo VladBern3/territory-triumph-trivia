@@ -62,7 +62,7 @@ export function QuestionModal({
             question={question}
             onAnswer={onSubmitAnswer}
             playerId={currentPlayerId || players[0]?.id || ''}
-            timeLimit={20}
+            timeLimit={10}
             showHint={true}
             collectedAnswers={collectedAnswers}
             players={players}
@@ -110,7 +110,7 @@ export function QuestionModal({
               question={question}
               onAnswer={onSubmitAnswer}
               playerId={attacker?.id || currentPlayerId || ''}
-              timeLimit={15}
+              timeLimit={10}
               collectedAnswers={collectedAnswers}
               players={players}
               expectedAnswerCount={expectedAnswerCount}
