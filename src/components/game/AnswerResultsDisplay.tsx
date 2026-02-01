@@ -1,6 +1,7 @@
 import { Answer, Player, Question } from '@/types/game';
 import { cn } from '@/lib/utils';
 import { Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface AnswerResultsDisplayProps {
   answers: Answer[];
@@ -29,6 +30,9 @@ export function AnswerResultsDisplay({
   question,
   questionStartTime,
 }: AnswerResultsDisplayProps) {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+
   // Get all active players and their answers
   const activePlayers = players.filter(p => !p.isEliminated);
   
@@ -64,31 +68,46 @@ export function AnswerResultsDisplay({
   // Find the winner (first in sorted list with a valid answer)
   const winnerId = sortedAnswers.find(e => e.answer !== null)?.player.id;
 
+  // Sequential reveal animation
+  useEffect(() => {
+    setVisibleCount(0);
+    setShowCorrectAnswer(false);
+
+    const totalAnswers = sortedAnswers.length;
+    
+    // Reveal each answer one by one (1 second per answer)
+    const revealTimers: NodeJS.Timeout[] = [];
+    
+    for (let i = 0; i < totalAnswers; i++) {
+      const timer = setTimeout(() => {
+        setVisibleCount(i + 1);
+      }, i * 1000); // 1 second delay between each
+      revealTimers.push(timer);
+    }
+
+    // Show correct answer after all player answers + 3 seconds delay
+    const correctAnswerTimer = setTimeout(() => {
+      setShowCorrectAnswer(true);
+    }, totalAnswers * 1000 + 3000); // All answers + 3 seconds
+
+    return () => {
+      revealTimers.forEach(t => clearTimeout(t));
+      clearTimeout(correctAnswerTimer);
+    };
+  }, [sortedAnswers.length]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Question text */}
       <p className="text-center text-lg text-foreground font-medium px-4">
         {question.text}
       </p>
       
-      {/* Correct answer - top right corner with glow */}
-      <div className="flex justify-end mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Правильный ответ:</span>
-          <div className="relative">
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-green-500/50 blur-lg rounded-lg animate-pulse" />
-            <div className="relative bg-gradient-to-br from-green-600 to-green-700 text-white px-4 py-2 rounded-lg font-display text-xl font-bold shadow-lg border border-green-400/50">
-              {question.correctAnswer}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Player answer cards */}
-      <div className="grid grid-cols-1 gap-3">
+      {/* Player answer cards - horizontal row */}
+      <div className="flex flex-wrap justify-center gap-3">
         {sortedAnswers.map((entry, index) => {
           const { player, answer, timestamp } = entry;
+          const isVisible = index < visibleCount;
           
           const timeTaken = timestamp !== Infinity 
             ? (timestamp - questionStartTime) / 1000 
@@ -104,46 +123,47 @@ export function AnswerResultsDisplay({
             <div
               key={player.id}
               className={cn(
-                "relative overflow-hidden rounded-xl border-2 transition-all",
-                "bg-gradient-to-r",
+                "relative overflow-hidden rounded-xl border-2 transition-all duration-500",
+                "bg-gradient-to-b w-32 sm:w-40",
                 playerGradientClasses[player.color],
-                isWinner && "ring-2 ring-green-500/50 shadow-lg shadow-green-500/20",
-                "animate-fade-in"
+                isWinner && showCorrectAnswer && "ring-2 ring-green-500/50 shadow-lg shadow-green-500/20",
+                isVisible 
+                  ? "opacity-100 translate-y-0 scale-100" 
+                  : "opacity-0 translate-y-8 scale-90 pointer-events-none"
               )}
-              style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Winner glow overlay */}
-              {isWinner && (
-                <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-transparent pointer-events-none" />
+              {isWinner && showCorrectAnswer && (
+                <div className="absolute inset-0 bg-gradient-to-b from-green-500/10 to-transparent pointer-events-none" />
               )}
               
-              <div className="relative flex items-center justify-between px-5 py-4">
-                {/* Answer - large centered */}
-                <div className="flex-1 text-center">
-                  <span className={cn(
-                    "font-display text-3xl font-bold",
-                    isNoAnswer ? "text-muted-foreground" : "text-foreground",
-                    isCorrect && "text-green-500"
-                  )}>
-                    {isNoAnswer ? '—' : answer}
-                  </span>
-                </div>
-                
-                {/* Player name - bottom left */}
-                <div className="absolute bottom-2 left-4 flex items-center gap-2">
+              <div className="relative flex flex-col items-center px-3 py-4">
+                {/* Player name - top */}
+                <div className="flex items-center gap-1 mb-2">
                   <span className={cn(
                     "text-sm font-medium",
                     playerTextClasses[player.color]
                   )}>
                     {player.name}
                   </span>
-                  {isCorrect && (
+                  {isCorrect && showCorrectAnswer && (
                     <span className="text-green-500 text-xs">✓</span>
                   )}
                 </div>
                 
-                {/* Time - bottom right */}
-                <div className="absolute bottom-2 right-4 flex items-center gap-1 text-sm text-muted-foreground">
+                {/* Answer - large centered */}
+                <div className="flex-1 flex items-center justify-center">
+                  <span className={cn(
+                    "font-display text-2xl sm:text-3xl font-bold",
+                    isNoAnswer ? "text-muted-foreground" : "text-foreground",
+                    isCorrect && showCorrectAnswer && "text-green-500"
+                  )}>
+                    {isNoAnswer ? '—' : answer}
+                  </span>
+                </div>
+                
+                {/* Time - bottom */}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-2">
                   <Clock className="w-3 h-3" />
                   <span className="font-mono text-xs">
                     {timeTaken !== null ? timeTaken.toFixed(2) : '—'}
@@ -153,6 +173,25 @@ export function AnswerResultsDisplay({
             </div>
           );
         })}
+      </div>
+
+      {/* Correct answer - appears after delay with glow */}
+      <div className={cn(
+        "flex justify-center transition-all duration-700",
+        showCorrectAnswer 
+          ? "opacity-100 translate-y-0 scale-100" 
+          : "opacity-0 translate-y-8 scale-90"
+      )}>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Правильный ответ:</span>
+          <div className="relative">
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-green-500/50 blur-lg rounded-lg animate-pulse" />
+            <div className="relative bg-gradient-to-br from-green-600 to-green-700 text-white px-4 py-2 rounded-lg font-display text-xl font-bold shadow-lg border border-green-400/50">
+              {question.correctAnswer}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
