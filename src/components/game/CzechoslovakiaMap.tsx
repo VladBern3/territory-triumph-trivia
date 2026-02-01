@@ -20,8 +20,9 @@ const playerColorValues: Record<string, string> = {
 };
 
 const neutralColor = 'hsl(38, 25%, 85%)';
-const gapColor = 'hsl(38, 30%, 92%)'; // Lighter color for gaps between regions
+const gapColor = 'transparent'; // Transparent borders
 const selectedStrokeColor = 'hsl(38, 70%, 50%)';
+const mapBackgroundColor = 'hsl(220, 60%, 20%)'; // Dark blue background
 
 export function CzechoslovakiaMap({
   territories,
@@ -161,7 +162,13 @@ export function CzechoslovakiaMap({
   const capitals = territories.filter(t => t.isCapital && t.ownerId);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center" style={{ perspective: '1000px' }}>
+    <div 
+      className="relative w-full h-full flex items-center justify-center rounded-xl overflow-hidden" 
+      style={{ 
+        perspective: '1000px',
+        backgroundColor: mapBackgroundColor,
+      }}
+    >
       <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
         <svg
           ref={svgRef}
@@ -170,7 +177,7 @@ export function CzechoslovakiaMap({
           fill="none"
           preserveAspectRatio="xMidYMid meet"
           style={{ 
-            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
+            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))',
           }}
           dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
         />
@@ -180,7 +187,7 @@ export function CzechoslovakiaMap({
           const owner = players.find(p => p.id === capital.ownerId);
           if (!owner) return null;
           
-          // Calculate position as percentage of viewBox
+          // Calculate position as percentage of viewBox - centered on territory
           const xPercent = (capital.position.x / 1499) * 100;
           const yPercent = (capital.position.y / 717) * 100;
           
@@ -191,10 +198,10 @@ export function CzechoslovakiaMap({
               style={{
                 left: `${xPercent}%`,
                 top: `${yPercent}%`,
-                transform: 'translate(-50%, -100%)',
+                transform: 'translate(-50%, -50%)', // Center on the territory
               }}
             >
-              {/* Player name */}
+              {/* Player name above crown */}
               <span 
                 className="text-xs font-bold px-2 py-0.5 rounded-full mb-1 whitespace-nowrap shadow-md"
                 style={{ 
@@ -207,16 +214,16 @@ export function CzechoslovakiaMap({
               </span>
               {/* Crown icon */}
               <div 
-                className="p-1 rounded-full shadow-lg"
+                className="p-1.5 rounded-full shadow-lg"
                 style={{ 
                   backgroundColor: playerColorValues[owner.color],
                 }}
               >
                 <Crown 
-                  className="w-5 h-5" 
+                  className="w-6 h-6" 
                   style={{ 
                     color: owner.color === 'yellow' ? '#1a1a1a' : 'white',
-                    filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))',
+                    filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
                   }} 
                 />
               </div>
