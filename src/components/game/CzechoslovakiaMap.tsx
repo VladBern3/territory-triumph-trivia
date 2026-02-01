@@ -19,7 +19,7 @@ const playerColorValues: Record<string, string> = {
 };
 
 const neutralColor = 'hsl(38, 25%, 85%)';
-const strokeColor = 'hsl(38, 20%, 40%)';
+const gapColor = 'hsl(38, 30%, 92%)'; // Lighter color for gaps between regions
 const selectedStrokeColor = 'hsl(38, 70%, 50%)';
 
 export function CzechoslovakiaMap({
@@ -104,10 +104,10 @@ export function CzechoslovakiaMap({
         path.style.opacity = '1';
       }
 
-      // Apply styles
+      // Apply styles - use gap color for stroke to create visual separation
       path.style.fill = fillColor;
-      path.style.stroke = isSelected ? selectedStrokeColor : strokeColor;
-      path.style.strokeWidth = isSelected ? '3' : '1.5';
+      path.style.stroke = isSelected ? selectedStrokeColor : gapColor;
+      path.style.strokeWidth = isSelected ? '4' : '3'; // Thicker stroke creates gap effect
       path.style.cursor = isSelectable ? 'pointer' : 'not-allowed';
       path.style.transition = 'fill 0.3s ease, stroke 0.2s ease, stroke-width 0.2s ease';
       
@@ -162,6 +162,7 @@ export function CzechoslovakiaMap({
         ref={svgRef}
         viewBox="0 0 1499 717"
         className="w-full h-full max-w-6xl"
+        fill="none"
         preserveAspectRatio="xMidYMid meet"
         style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))' }}
         dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
