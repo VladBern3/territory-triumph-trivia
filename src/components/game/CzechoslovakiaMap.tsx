@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Territory, Player, TerritoryAnimation } from '@/types/game';
+import { Crown } from 'lucide-react';
 
 interface CzechoslovakiaMapProps {
   territories: Territory[];
@@ -156,20 +157,73 @@ export function CzechoslovakiaMap({
     );
   }
 
+  // Get capitals with their owners for rendering crowns
+  const capitals = territories.filter(t => t.isCapital && t.ownerId);
+
   return (
     <div className="relative w-full h-full flex items-center justify-center" style={{ perspective: '1000px' }}>
-      <svg
-        ref={svgRef}
-        viewBox="0 0 1499 717"
-        className="w-full h-full max-w-6xl"
-        fill="none"
-        preserveAspectRatio="xMidYMid meet"
-        style={{ 
-          filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
-          transform: 'rotateX(20deg)',
-        }}
-        dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
-      />
+      <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
+        <svg
+          ref={svgRef}
+          viewBox="0 0 1499 717"
+          className="w-full h-full"
+          fill="none"
+          preserveAspectRatio="xMidYMid meet"
+          style={{ 
+            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
+          }}
+          dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
+        />
+        
+        {/* Capital crowns overlay */}
+        {capitals.map(capital => {
+          const owner = players.find(p => p.id === capital.ownerId);
+          if (!owner) return null;
+          
+          // Calculate position as percentage of viewBox
+          const xPercent = (capital.position.x / 1499) * 100;
+          const yPercent = (capital.position.y / 717) * 100;
+          
+          return (
+            <div
+              key={capital.id}
+              className="absolute flex flex-col items-center pointer-events-none animate-fade-in"
+              style={{
+                left: `${xPercent}%`,
+                top: `${yPercent}%`,
+                transform: 'translate(-50%, -100%)',
+              }}
+            >
+              {/* Player name */}
+              <span 
+                className="text-xs font-bold px-2 py-0.5 rounded-full mb-1 whitespace-nowrap shadow-md"
+                style={{ 
+                  backgroundColor: playerColorValues[owner.color],
+                  color: owner.color === 'yellow' ? '#1a1a1a' : 'white',
+                  textShadow: owner.color === 'yellow' ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                }}
+              >
+                {owner.name}
+              </span>
+              {/* Crown icon */}
+              <div 
+                className="p-1 rounded-full shadow-lg"
+                style={{ 
+                  backgroundColor: playerColorValues[owner.color],
+                }}
+              >
+                <Crown 
+                  className="w-5 h-5" 
+                  style={{ 
+                    color: owner.color === 'yellow' ? '#1a1a1a' : 'white',
+                    filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.3))',
+                  }} 
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

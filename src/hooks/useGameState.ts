@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { GameState, Player, Territory, Answer, Question, TerritoryAnimation } from '@/types/game';
 import { initialTerritories, getMaximallyDistantTerritories } from '@/data/territories';
 
-const ANIMATION_DURATION = 800; // ms for capture animation
+const ANIMATION_DURATION = 2000; // ms for capture animation (2 seconds)
 const CAPITAL_POINTS = 1000;
 const TERRITORY_POINTS = 200;
 
