@@ -253,10 +253,15 @@ const Index = () => {
     localGame.selectSettlementTerritory(territoryId);
   }, [localGame]);
 
-  // Get selectable settlement territories (neutral territories)
+  // Get selectable settlement territories (all neutral territories - for backwards compatibility)
   const getSelectableSettlementTerritories = useCallback(() => {
     return localGame.neutralTerritories.map(t => t.id);
   }, [localGame.neutralTerritories]);
+
+  // Get neighbor settlement territories (neutral territories adjacent to current player)
+  const getNeighborSettlementTerritories = useCallback(() => {
+    return localGame.getNeighborSettlementTerritories();
+  }, [localGame]);
 
   // Handle role selection for testing
   const handleSelectRole = useCallback((playerId: string) => {
@@ -337,6 +342,7 @@ const Index = () => {
         onSelectSettlementTerritory={handleSelectSettlementTerritory}
         attackableTerritories={localGame.getAttackableTerritories()}
         selectableSettlementTerritories={getSelectableSettlementTerritories()}
+        neighborSettlementTerritories={getNeighborSettlementTerritories()}
         waitingForAnswers={localGame.answers.length > 0}
         collectedAnswers={localGame.answers}
         questionStartTime={localGame.questionStartTime}
