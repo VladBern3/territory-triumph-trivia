@@ -253,6 +253,27 @@ const Index = () => {
     localGame.selectSettlementTerritory(territoryId);
   }, [localGame]);
 
+  // Handle auto-selection when timer expires
+  const handleSelectionTimeout = useCallback(() => {
+    const { phase: currentPhase, isSelectingSettlementTerritory, currentTurnPlayerId, targetTerritoryId } = localGame.gameState;
+    
+    if (isSelectingSettlementTerritory && currentTurnPlayerId) {
+      // Auto-select a random territory from available ones (following priority rules)
+      const availableTerritories = localGame.getNeighborSettlementTerritories();
+      if (availableTerritories.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableTerritories.length);
+        localGame.selectSettlementTerritory(availableTerritories[randomIndex]);
+      }
+    } else if (currentPhase === 'war' && currentTurnPlayerId && !targetTerritoryId) {
+      // Auto-select a random attack target
+      const attackable = localGame.getAttackableTerritories();
+      if (attackable.length > 0) {
+        const randomIndex = Math.floor(Math.random() * attackable.length);
+        localGame.selectAttackTarget(attackable[randomIndex]);
+      }
+    }
+  }, [localGame]);
+
   // Get selectable settlement territories (only adjacent neutral territories)
   const getSelectableSettlementTerritories = useCallback(() => {
     return localGame.getNeighborSettlementTerritories();
@@ -347,6 +368,7 @@ const Index = () => {
         collectedAnswers={localGame.answers}
         questionStartTime={localGame.questionStartTime}
         localPlayerId={humanPlayerId}
+        onSelectionTimeout={handleSelectionTimeout}
       />
       {debugPanel}
     </>

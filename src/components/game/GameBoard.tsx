@@ -3,7 +3,8 @@ import { CzechoslovakiaMap } from './CzechoslovakiaMap';
 import { PlayerPanel } from './PlayerPanel';
 import { QuestionModal } from './QuestionModal';
 import { BattleInfo } from './BattleInfo';
-import { Swords, Target, Loader2, MapPin } from 'lucide-react';
+import { TerritorySelectionTimer } from './TerritorySelectionTimer';
+import { Loader2, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
@@ -18,6 +19,7 @@ interface GameBoardProps {
   collectedAnswers?: Answer[];
   questionStartTime?: number;
   localPlayerId?: string | null;
+  onSelectionTimeout?: () => void;
 }
 
 export function GameBoard({
@@ -32,6 +34,7 @@ export function GameBoard({
   collectedAnswers = [],
   questionStartTime = Date.now(),
   localPlayerId,
+  onSelectionTimeout,
 }: GameBoardProps) {
   const {
     phase,
@@ -66,6 +69,9 @@ export function GameBoard({
   
   // Show question modal when there's a question and not selecting target and not initializing
   const showQuestionModal = currentQuestion && !isSelectingWarTarget && !isInitializing && !isSelectingSettlementTerritory;
+
+  // Show territory selection timer when selecting settlement territory or war target
+  const showSelectionTimer = (isSelectingSettlementTerritory || isSelectingWarTarget) && currentPlayer;
 
   // Determine which territories are selectable (for click handling)
   // During settlement: only neutral neighbor territories are selectable
@@ -142,6 +148,17 @@ export function GameBoard({
         </div>
       )}
 
+      {/* Territory Selection Timer */}
+      {showSelectionTimer && currentPlayer && onSelectionTimeout && (
+        <TerritorySelectionTimer
+          playerName={currentPlayer.name}
+          playerColor={currentPlayer.color}
+          isActive={true}
+          duration={15}
+          onTimeout={onSelectionTimeout}
+        />
+      )}
+
       {/* Full-screen Map */}
       <div className="flex-1 flex items-center justify-center p-4 pt-16 pb-24">
         <CzechoslovakiaMap
@@ -157,42 +174,27 @@ export function GameBoard({
         />
       </div>
 
-      {/* Settlement Territory Selection Prompt */}
+      {/* Settlement Territory Selection - remaining count indicator */}
       {isSelectingSettlementTerritory && currentSelector && (
         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-10 animate-fade-in">
           <div className={cn(
-            "bg-primary/90 backdrop-blur-sm text-primary-foreground px-6 py-3 rounded-lg shadow-lg",
-            "flex items-center gap-3"
+            "bg-card/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg medieval-border",
+            "flex items-center gap-2 text-sm"
           )}>
-            <MapPin className="w-5 h-5 animate-pulse" />
-            <p className="font-display">
-              <span className="font-semibold">{currentPlayer?.name}</span>, выберите территорию 
-              <span className="ml-1 text-sm opacity-80">
-                (осталось: {currentSelector.territoriesRemaining})
-              </span>
-            </p>
+            <MapPin className="w-4 h-4 text-primary animate-pulse" />
+            <span className="text-muted-foreground">
+              Осталось выбрать: <span className="font-semibold text-foreground">{currentSelector.territoriesRemaining}</span>
+            </span>
           </div>
         </div>
       )}
 
-      {/* War Target Selection Prompt */}
-      {isSelectingWarTarget && (
+      {/* War Target Selection - no attackable territories warning */}
+      {isSelectingWarTarget && attackableTerritories.length === 0 && (
         <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-10 animate-fade-in">
-          <div className={cn(
-            "bg-primary/90 backdrop-blur-sm text-primary-foreground px-6 py-3 rounded-lg shadow-lg",
-            "flex items-center gap-3"
-          )}>
-            <Target className="w-5 h-5 animate-pulse" />
-            <p className="font-display">
-              <span className="font-semibold">{currentPlayer?.name}</span>, выберите территорию для атаки
-            </p>
-            <Swords className="w-5 h-5" />
+          <div className="bg-destructive/90 backdrop-blur-sm text-destructive-foreground px-4 py-2 rounded-lg shadow-lg">
+            <p className="text-sm">Нет доступных территорий для атаки</p>
           </div>
-          {attackableTerritories.length === 0 && (
-            <p className="text-sm text-center mt-2 text-muted-foreground bg-card/80 px-3 py-1 rounded">
-              Нет доступных территорий для атаки
-            </p>
-          )}
         </div>
       )}
 
