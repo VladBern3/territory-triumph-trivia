@@ -476,15 +476,26 @@ export function useGameState(questionProviders?: QuestionProviders) {
     if (!currentSelector) return;
 
     // VALIDATE: Territory must be adjacent to player's existing territories
+    // FALLBACK: If no adjacent neutral territories exist, allow any neutral territory
     const currentPlayer = gameState.players.find(p => p.id === currentSelector.playerId);
     if (!currentPlayer) return;
     
     const playerTerritoryIds = new Set(currentPlayer.territories);
     const isAdjacent = territory.neighbors.some(nId => playerTerritoryIds.has(nId));
     
-    if (!isAdjacent) {
+    // Check if there are ANY adjacent neutral territories
+    const hasAnyAdjacentNeutral = gameState.territories.some(t => 
+      t.ownerId === null && t.neighbors.some(nId => playerTerritoryIds.has(nId))
+    );
+    
+    // Only enforce adjacency if there are adjacent neutral territories available
+    if (!isAdjacent && hasAnyAdjacentNeutral) {
       console.log('Territory is not adjacent to player territories, ignoring selection');
       return;
+    }
+    
+    if (!isAdjacent && !hasAnyAdjacentNeutral) {
+      console.log('No adjacent neutral territories available, allowing any neutral territory');
     }
 
     // Lock to prevent duplicate calls
@@ -598,16 +609,19 @@ export function useGameState(questionProviders?: QuestionProviders) {
   }, [gameState.players, gameState.territories, gameState.currentTurnPlayerId]);
 
   // Get neighbor territories for settlement (neutral territories adjacent to current player's territories)
+  // FALLBACK: If no adjacent neutral territories exist, return all neutral territories
   const getNeighborSettlementTerritories = useCallback(() => {
     const currentPlayer = gameState.players.find(p => p.id === gameState.currentTurnPlayerId);
     if (!currentPlayer) return [];
     
     const playerTerritoryIds = new Set(currentPlayer.territories);
     const neighborNeutral: string[] = [];
+    const allNeutral: string[] = [];
     
     gameState.territories.forEach(territory => {
       // Only include neutral territories
       if (territory.ownerId === null) {
+        allNeutral.push(territory.id);
         // Check if any of its neighbors belong to the current player
         const hasAdjacentTerritory = territory.neighbors.some(nId => playerTerritoryIds.has(nId));
         if (hasAdjacentTerritory) {
@@ -615,6 +629,12 @@ export function useGameState(questionProviders?: QuestionProviders) {
         }
       }
     });
+    
+    // If no adjacent neutral territories, return all neutral (fallback)
+    if (neighborNeutral.length === 0 && allNeutral.length > 0) {
+      console.log('No adjacent neutral territories, allowing all neutral territories');
+      return allNeutral;
+    }
     
     return neighborNeutral;
   }, [gameState.players, gameState.territories, gameState.currentTurnPlayerId]);
