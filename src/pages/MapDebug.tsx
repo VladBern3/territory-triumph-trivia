@@ -298,6 +298,7 @@ const MapDebug = () => {
             <div 
               ref={mapContainerRef}
               className="absolute inset-0 pointer-events-none flex items-center justify-center"
+              style={{ perspective: '1000px' }}
             >
               <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
                 {Object.entries(displayedCenters).map(([territoryId, center]) => {
