@@ -164,6 +164,13 @@ export function useMultiplayer() {
     return code;
   };
 
+  // Get next available color based on existing players
+  const getNextAvailableColor = (existingPlayers: Player[]): Player['color'] => {
+    const usedColors = existingPlayers.map(p => p.color);
+    const allColors: Player['color'][] = ['red', 'blue', 'green', 'yellow'];
+    return allColors.find(c => !usedColors.includes(c)) || 'red';
+  };
+
   // Join an existing session
   const joinSession = async (code: string, player: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>) => {
     setError(null);
@@ -201,8 +208,12 @@ export function useMultiplayer() {
       return true;
     }
 
+    // Assign unique color based on existing players
+    const availableColor = getNextAvailableColor(existingPlayers);
+
     const newPlayer: Player = {
       ...player,
+      color: availableColor, // Override with available color
       territories: [],
       capitalId: null,
       isEliminated: false,
@@ -211,10 +222,12 @@ export function useMultiplayer() {
 
     const updatedPlayers = [...existingPlayers, newPlayer];
 
-    const { error: updateError } = await supabase
+    const { data: updatedSession, error: updateError } = await supabase
       .from('game_sessions')
       .update({ players: updatedPlayers as unknown as Json })
-      .eq('id', session.id);
+      .eq('id', session.id)
+      .select()
+      .single();
 
     if (updateError) {
       setError('Не удалось присоединиться: ' + updateError.message);
@@ -225,6 +238,12 @@ export function useMultiplayer() {
     setSessionCode(code.toUpperCase());
     setLocalPlayerId(player.id);
     setIsHost(false);
+    
+    // Update game state with fresh data BEFORE subscribing
+    if (updatedSession) {
+      updateGameStateFromSession(updatedSession as DbGameSession);
+    }
+    
     subscribeToSession(session.id);
 
     return true;
