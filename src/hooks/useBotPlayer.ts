@@ -35,6 +35,7 @@ const BOT_NAMES = ['Бот Алекс', 'Бот Мария', 'Бот Иван', 
 
 export function useBotPlayer() {
   const pendingBotsRef = useRef<Set<string>>(new Set());
+  const timeoutIdsRef = useRef<NodeJS.Timeout[]>([]);
 
   // Generate a bot answer for a numeric question
   const generateNumericAnswer = useCallback((
@@ -83,7 +84,9 @@ export function useBotPlayer() {
     difficulty: BotDifficulty,
     onSubmitAnswer: (answer: Answer) => void
   ) => {
-    // Clear any pending bots
+    // Clear any pending timeouts first
+    timeoutIdsRef.current.forEach(id => clearTimeout(id));
+    timeoutIdsRef.current = [];
     pendingBotsRef.current.clear();
 
     bots.forEach(bot => {
@@ -91,7 +94,7 @@ export function useBotPlayer() {
       
       const responseTime = getResponseTime(difficulty);
       
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         // Check if this bot answer is still pending
         if (!pendingBotsRef.current.has(bot.id)) return;
         
@@ -112,11 +115,15 @@ export function useBotPlayer() {
         onSubmitAnswer(botAnswer);
         pendingBotsRef.current.delete(bot.id);
       }, responseTime);
+      
+      timeoutIdsRef.current.push(timeoutId);
     });
   }, [generateNumericAnswer, generateMultipleChoiceAnswer, getResponseTime]);
 
   // Cancel all pending bot answers
   const cancelPendingAnswers = useCallback(() => {
+    timeoutIdsRef.current.forEach(id => clearTimeout(id));
+    timeoutIdsRef.current = [];
     pendingBotsRef.current.clear();
   }, []);
 
