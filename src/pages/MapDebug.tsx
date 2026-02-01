@@ -312,13 +312,17 @@ const MapDebug = () => {
             currentAnimation={currentAnimation}
           />
           
-          {/* Overlay with markers showing center positions */}
+          {/* Overlay with markers showing center positions - flat 2D layer for editing */}
+          {/* Note: This overlay is intentionally NOT 3D-transformed. 
+              The actual crowns/flags are rendered by CzechoslovakiaMap in proper 3D space.
+              This overlay is just for editing raw SVG coordinates. */}
           <div 
             ref={mapContainerRef}
-            className="absolute inset-0 pointer-events-none flex items-center justify-center"
-            style={{ perspective: '1000px' }}
+            className="absolute inset-0 pointer-events-none"
           >
-            <div className="relative w-full h-full max-w-6xl" style={{ transform: 'rotateX(20deg)' }}>
+            {/* Match the map's centering structure but without 3D transform */}
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="relative w-full h-full max-w-6xl">
               {Object.entries(displayedCenters).map(([territoryId, center]) => {
                 const isSelected = selectedTerritoryId === territoryId;
                 const isDragging = draggingId === territoryId;
@@ -390,6 +394,7 @@ const MapDebug = () => {
                   </div>
                 );
               })}
+              </div>
             </div>
           </div>
         </div>
