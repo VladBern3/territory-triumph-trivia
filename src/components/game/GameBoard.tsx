@@ -132,10 +132,14 @@ export function GameBoard({
         </div>
       )}
 
-      {/* Player Panel - fixed at bottom */}
+      {/* Player Panel - fixed at bottom, transparent */}
       <div className="absolute bottom-0 left-0 right-0 z-10">
-        <div className="bg-card/95 backdrop-blur-sm border-t border-border px-4 py-3">
-          <PlayerPanel players={players} currentPlayerId={currentTurnPlayerId} />
+        <div className="bg-transparent px-4 py-3">
+          <PlayerPanel 
+            players={players} 
+            currentPlayerId={currentTurnPlayerId} 
+            roundNumber={roundNumber}
+          />
         </div>
       </div>
 

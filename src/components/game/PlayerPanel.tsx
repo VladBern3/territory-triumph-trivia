@@ -1,75 +1,75 @@
 import { Player } from '@/types/game';
-import { Castle, Shield, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BattleIndicator } from './BattleIndicator';
 
 interface PlayerPanelProps {
   players: Player[];
   currentPlayerId: string | null;
+  roundNumber: number;
 }
 
 const playerBgClasses = {
-  red: 'bg-player-red/20 border-player-red',
-  blue: 'bg-player-blue/20 border-player-blue',
-  green: 'bg-player-green/20 border-player-green',
-  yellow: 'bg-player-yellow/20 border-player-yellow',
+  red: 'bg-player-red/30',
+  blue: 'bg-player-blue/30',
+  green: 'bg-player-green/30',
+  yellow: 'bg-player-yellow/30',
 };
 
-const playerTextClasses = {
-  red: 'text-player-red',
-  blue: 'text-player-blue',
-  green: 'text-player-green',
-  yellow: 'text-player-yellow',
+const playerColorClasses = {
+  red: 'bg-player-red',
+  blue: 'bg-player-blue',
+  green: 'bg-player-green',
+  yellow: 'bg-player-yellow',
 };
 
-export function PlayerPanel({ players, currentPlayerId }: PlayerPanelProps) {
+export function PlayerPanel({ players, currentPlayerId, roundNumber }: PlayerPanelProps) {
   return (
-    <div className="flex flex-wrap gap-3 justify-center">
-      {players.map((player) => (
-        <div
-          key={player.id}
-          className={cn(
-            'flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all duration-300',
-            playerBgClasses[player.color],
-            player.isEliminated && 'opacity-40 grayscale',
-            currentPlayerId === player.id && 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-105'
-          )}
-        >
-          {/* Player icon */}
-          <div className={cn('relative', playerTextClasses[player.color])}>
-            {player.capitalId ? (
-              <Castle className="w-6 h-6" />
-            ) : (
-              <Shield className="w-6 h-6" />
+    <div className="flex items-center justify-center gap-4">
+      {/* Players */}
+      <div className="flex gap-3">
+        {players.map((player) => (
+          <div
+            key={player.id}
+            className={cn(
+              'flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300',
+              playerBgClasses[player.color],
+              player.isEliminated && 'opacity-40 grayscale',
+              currentPlayerId === player.id && 'ring-2 ring-white/50 scale-105'
             )}
-            {currentPlayerId === player.id && (
-              <Crown className="absolute -top-2 -right-2 w-4 h-4 text-gold-shine animate-pulse" />
+          >
+            {/* Color indicator */}
+            <div 
+              className={cn(
+                'w-4 h-4 rounded-full',
+                playerColorClasses[player.color]
+              )}
+            />
+            
+            {/* Player info */}
+            <div className="flex flex-col">
+              <span className="font-display font-semibold text-sm text-foreground">
+                {player.name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {player.score} очков
+              </span>
+            </div>
+            
+            {/* Eliminated badge */}
+            {player.isEliminated && (
+              <span className="text-xs text-destructive font-semibold">
+                Выбыл
+              </span>
             )}
           </div>
-          
-          {/* Player info */}
-          <div className="flex flex-col">
-            <span className={cn('font-display font-semibold text-sm', playerTextClasses[player.color])}>
-              {player.name}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {player.territories.length} {getTerritoryWord(player.territories.length)}
-            </span>
-          </div>
-          
-          {/* Eliminated badge */}
-          {player.isEliminated && (
-            <span className="text-xs text-destructive font-semibold ml-2">
-              Выбыл
-            </span>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
+
+      {/* Battle Indicator */}
+      <BattleIndicator 
+        players={players} 
+        currentRound={Math.max(1, (roundNumber - 1) % 4 + 1)}
+      />
     </div>
   );
-}
-
-function getTerritoryWord(count: number): string {
-  if (count === 1) return 'земля';
-  if (count >= 2 && count <= 4) return 'земли';
-  return 'земель';
 }
