@@ -585,6 +585,28 @@ export function useGameState(questionProviders?: QuestionProviders) {
     return attackable;
   }, [gameState.players, gameState.territories, gameState.currentTurnPlayerId]);
 
+  // Get neighbor territories for settlement (neutral territories adjacent to current player's territories)
+  const getNeighborSettlementTerritories = useCallback(() => {
+    const currentPlayer = gameState.players.find(p => p.id === gameState.currentTurnPlayerId);
+    if (!currentPlayer) return [];
+    
+    const playerTerritoryIds = new Set(currentPlayer.territories);
+    const neighborNeutral: string[] = [];
+    
+    gameState.territories.forEach(territory => {
+      // Only include neutral territories
+      if (territory.ownerId === null) {
+        // Check if any of its neighbors belong to the current player
+        const hasAdjacentTerritory = territory.neighbors.some(nId => playerTerritoryIds.has(nId));
+        if (hasAdjacentTerritory) {
+          neighborNeutral.push(territory.id);
+        }
+      }
+    });
+    
+    return neighborNeutral;
+  }, [gameState.players, gameState.territories, gameState.currentTurnPlayerId]);
+
   // Reset game
   const resetGame = useCallback(() => {
     setGameState({
@@ -613,6 +635,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     selectAttackTarget,
     selectSettlementTerritory,
     getAttackableTerritories,
+    getNeighborSettlementTerritories,
     resetGame,
     neutralTerritories,
     answers,

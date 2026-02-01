@@ -10,6 +10,8 @@ interface CzechoslovakiaMapProps {
   selectableTerritories?: string[];
   highlightedTerritories?: string[];
   currentAnimation?: TerritoryAnimation | null;
+  isMyTurn?: boolean; // Whether it's the local player's turn
+  showUnavailableMask?: boolean; // Whether to show diagonal stripes on unavailable territories
 }
 
 // Dynamic territory centers calculated from SVG path bounding boxes
@@ -38,6 +40,8 @@ export function CzechoslovakiaMap({
   selectableTerritories = [],
   highlightedTerritories = [],
   currentAnimation,
+  isMyTurn = true,
+  showUnavailableMask = false,
 }: CzechoslovakiaMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [svgContent, setSvgContent] = useState<string | null>(null);
@@ -122,8 +126,12 @@ export function CzechoslovakiaMap({
       if (!territory) return;
 
       const isSelected = territory.id === selectedTerritoryId;
-      const isSelectable = selectableTerritories.length === 0 || selectableTerritories.includes(territory.id);
+      // Territory is selectable only if it's my turn AND it's in the selectable list (or list is empty)
+      const isInSelectableList = selectableTerritories.length === 0 || selectableTerritories.includes(territory.id);
+      const isSelectable = isMyTurn && isInSelectableList;
       const isHighlighted = highlightedTerritories.includes(territory.id);
+      // Show mask on territories that are not selectable when we're in selection mode
+      const showMask = showUnavailableMask && selectableTerritories.length > 0 && !selectableTerritories.includes(territory.id);
       
       // Get owner color
       let fillColor = neutralColor;
@@ -149,20 +157,25 @@ export function CzechoslovakiaMap({
       }
 
       // Apply styles - use gap color for stroke to create visual separation
-      path.style.fill = fillColor;
+      path.style.fill = showMask ? `url(#unavailablePattern-${territoryId})` : fillColor;
       path.style.stroke = isSelected ? selectedStrokeColor : gapColor;
       path.style.strokeWidth = isSelected ? '4' : '3'; // Thicker stroke creates gap effect
-      path.style.cursor = isSelectable ? 'pointer' : 'not-allowed';
+      path.style.cursor = isSelectable ? 'pointer' : 'default';
       path.style.transition = 'fill 0.3s ease, stroke 0.2s ease, stroke-width 0.2s ease';
       
-      if (!isSelectable) {
-        path.style.opacity = '0.6';
+      // Don't reduce opacity for non-selectable territories - just show the pattern
+      if (!isSelectable && !showMask) {
+        path.style.opacity = '0.8';
+      } else {
+        path.style.opacity = '1';
       }
 
       if (isHighlighted) {
         path.style.filter = 'drop-shadow(0 0 8px rgba(255, 200, 50, 0.8))';
       } else if (isSelected) {
         path.style.filter = 'drop-shadow(0 0 12px hsl(38, 70%, 50%))';
+      } else if (showMask) {
+        path.style.filter = 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5))';
       } else {
         path.style.filter = 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.3))';
       }
@@ -174,9 +187,9 @@ export function CzechoslovakiaMap({
         }
       };
 
-      // Hover effects with attack indicator
+      // Hover effects with attack indicator - only if it's my turn
       path.onmouseenter = () => {
-        if (isSelectable && selectableTerritories.length > 0) {
+        if (isSelectable && selectableTerritories.length > 0 && isMyTurn) {
           path.style.filter = 'drop-shadow(0 0 8px rgba(255, 200, 50, 0.6)) brightness(1.1)';
           setHoveredTerritory(territoryId);
         }
@@ -187,12 +200,14 @@ export function CzechoslovakiaMap({
           path.style.filter = 'drop-shadow(0 0 12px hsl(38, 70%, 50%))';
         } else if (isHighlighted) {
           path.style.filter = 'drop-shadow(0 0 8px rgba(255, 200, 50, 0.8))';
+        } else if (showMask) {
+          path.style.filter = 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5))';
         } else {
           path.style.filter = 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.3))';
         }
       };
     });
-  }, [territories, players, selectedTerritoryId, selectableTerritories, highlightedTerritories, currentAnimation, animationProgress, onTerritoryClick, svgContent]);
+  }, [territories, players, selectedTerritoryId, selectableTerritories, highlightedTerritories, currentAnimation, animationProgress, onTerritoryClick, svgContent, isMyTurn, showUnavailableMask]);
 
   if (!svgContent) {
     return (
@@ -227,8 +242,38 @@ export function CzechoslovakiaMap({
           style={{ 
             filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))',
           }}
-          dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
-        />
+        >
+          {/* Pattern definitions for unavailable territories */}
+          <defs>
+            {territories.map(territory => {
+              const owner = territory.ownerId ? players.find(p => p.id === territory.ownerId) : null;
+              const baseColor = owner ? playerColorValues[owner.color] : neutralColor;
+              
+              return (
+                <pattern
+                  key={territory.id}
+                  id={`unavailablePattern-${territory.id}`}
+                  patternUnits="userSpaceOnUse"
+                  width="12"
+                  height="12"
+                  patternTransform="rotate(45)"
+                >
+                  <rect width="12" height="12" fill={baseColor} />
+                  <line
+                    x1="0"
+                    y1="6"
+                    x2="12"
+                    y2="6"
+                    stroke="rgba(0, 0, 0, 0.4)"
+                    strokeWidth="4"
+                  />
+                </pattern>
+              );
+            })}
+          </defs>
+          {/* Inject SVG content */}
+          <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
+        </svg>
         
         {/* Selection indicator arrow - 3D style for settlement phase */}
         {hoveredCenter && selectableTerritories.length > 0 && selectableTerritories.includes(hoveredTerritory!) && (

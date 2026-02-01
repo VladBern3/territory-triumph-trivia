@@ -13,6 +13,7 @@ interface GameBoardProps {
   onSelectSettlementTerritory: (territoryId: string) => void;
   attackableTerritories: string[];
   selectableSettlementTerritories: string[];
+  neighborSettlementTerritories: string[]; // Territories adjacent to current player
   waitingForAnswers: boolean;
   collectedAnswers?: Answer[];
   questionStartTime?: number;
@@ -26,6 +27,7 @@ export function GameBoard({
   onSelectSettlementTerritory,
   attackableTerritories,
   selectableSettlementTerritories,
+  neighborSettlementTerritories,
   waitingForAnswers,
   collectedAnswers = [],
   questionStartTime = Date.now(),
@@ -56,18 +58,26 @@ export function GameBoard({
   const isSelectingWarTarget = phase === 'war' && !targetTerritoryId && currentTurnPlayerId && !isSelectingSettlementTerritory;
   const isBattleActive = (phase === 'war' || phase === 'capital_battle') && targetTerritoryId;
   
+  // Check if it's the local player's turn
+  const isMyTurn = localPlayerId ? currentTurnPlayerId === localPlayerId : true;
+  
   // Get current selector info for settlement
   const currentSelector = settlementSelections.find(s => s.playerId === currentTurnPlayerId && s.territoriesRemaining > 0);
   
   // Show question modal when there's a question and not selecting target and not initializing
   const showQuestionModal = currentQuestion && !isSelectingWarTarget && !isInitializing && !isSelectingSettlementTerritory;
 
-  // Determine which territories are selectable
+  // Determine which territories are selectable (for click handling)
+  // During settlement: only neutral neighbor territories are selectable
+  // During war: only attackable territories are selectable
   const selectableTerritories = isSelectingSettlementTerritory 
-    ? selectableSettlementTerritories 
+    ? (isMyTurn ? neighborSettlementTerritories : [])
     : isSelectingWarTarget 
-      ? attackableTerritories 
+      ? (isMyTurn ? attackableTerritories : [])
       : [];
+  
+  // Show unavailable mask only during selection phases and when it's my turn
+  const showUnavailableMask = isMyTurn && (isSelectingSettlementTerritory || isSelectingWarTarget);
 
   // Determine click handler
   const handleTerritoryClick = isSelectingSettlementTerritory
@@ -138,6 +148,8 @@ export function GameBoard({
           selectableTerritories={selectableTerritories}
           highlightedTerritories={isBattleActive && targetTerritoryId ? [targetTerritoryId] : []}
           currentAnimation={currentAnimation}
+          isMyTurn={isMyTurn}
+          showUnavailableMask={showUnavailableMask}
         />
       </div>
 
