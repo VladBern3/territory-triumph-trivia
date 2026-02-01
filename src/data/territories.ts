@@ -7,7 +7,7 @@ import { Territory } from "@/types/game";
 // Approximate center positions calculated from path bounding boxes
 const regionCenters: Record<string, { x: number; y: number }> = {
   "region-1": { x: 90, y: 190 }, // Top-left (path 1)
-  "region-2": { x: 180, y: 400 }, // Left-center (path 2)
+  "region-2": { x: 180, y: 300 }, // Left-center (path 2)
   "region-3": { x: 380, y: 420 }, // Center-left lower (path 3)
   "region-4": { x: 320, y: 250 }, // Center-left upper (path 4)
   "region-5": { x: 280, y: 120 }, // Top center-left (path 5)
