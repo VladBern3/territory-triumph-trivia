@@ -93,7 +93,7 @@ export function CzechMap({
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       <svg
-        viewBox="0 0 820 480"
+        viewBox="0 0 830 520"
         className="w-full h-full max-w-6xl"
         preserveAspectRatio="xMidYMid meet"
         style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))' }}
@@ -115,7 +115,7 @@ export function CzechMap({
           ))}
         </defs>
         
-        <rect x="0" y="0" width="820" height="480" fill="url(#map-gradient)" rx="12" />
+        <rect x="0" y="0" width="830" height="520" fill="url(#map-gradient)" rx="12" />
         
         {/* Border connections (showing neighboring territories) */}
         <g className="border-lines" opacity="0.2">
@@ -240,14 +240,14 @@ export function CzechMap({
 
         {/* Map title */}
         <text
-          x="410"
+          x="415"
           y="30"
           textAnchor="middle"
           className="font-display text-lg"
           fill="hsl(38, 30%, 35%)"
-          style={{ fontWeight: 700 }}
+          style={{ fontWeight: 700, letterSpacing: '0.05em' }}
         >
-          Čechy a Morava
+          Česká republika
         </text>
       </svg>
     </div>
