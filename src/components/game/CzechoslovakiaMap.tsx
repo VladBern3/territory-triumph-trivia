@@ -163,11 +163,9 @@ export function CzechoslovakiaMap({
       path.style.cursor = isSelectable ? 'pointer' : 'default';
       path.style.transition = 'fill 0.3s ease, stroke 0.2s ease, stroke-width 0.2s ease';
       
-      // Selectable territories (for attack) are slightly darker
-      if (isSelectable && selectableTerritories.length > 0 && selectableTerritories.includes(territory.id)) {
+      // Unavailable territories for attack are darker
+      if (selectableTerritories.length > 0 && !selectableTerritories.includes(territory.id)) {
         path.style.opacity = '0.6';
-      } else if (!isSelectable && !showMask) {
-        path.style.opacity = '0.8';
       } else {
         path.style.opacity = '1';
       }
