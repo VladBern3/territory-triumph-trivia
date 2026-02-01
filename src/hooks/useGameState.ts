@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { GameState, Player, Territory, Answer, Question, TerritoryAnimation } from '@/types/game';
-import { initialTerritories, getMaximallyDistantTerritories } from '@/data/territories';
+import { initialTerritories } from '@/data/territories';
 
 const ANIMATION_DURATION = 2000; // ms for capture animation (2 seconds)
 const CAPITAL_POINTS = 1000;
@@ -185,13 +185,59 @@ export function useGameState(questionProviders?: QuestionProviders) {
     }, (QUESTION_TIME_LIMIT + 0.5) * 1000); // +0.5 second buffer after UI timer
   }, []);
 
-  // Initialize game with players - auto-assign starting territories maximally apart
-  const startGame = useCallback((playerData: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>[]) => {
-    // Get starting territories that are maximally far apart
-    const startingTerritoryIds = getMaximallyDistantTerritories(playerData.length);
+  // Get random non-neighboring capitals for all players
+  const getRandomNonNeighboringCapitals = useCallback((playerCount: number, territories: Territory[]): string[] => {
+    const selectedIds: string[] = [];
+    const availableTerritories = [...territories];
     
+    // Shuffle territories for randomness
+    for (let i = availableTerritories.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [availableTerritories[i], availableTerritories[j]] = [availableTerritories[j], availableTerritories[i]];
+    }
+    
+    for (let i = 0; i < playerCount; i++) {
+      // Find a territory that is not a neighbor of any already selected capital
+      const validTerritory = availableTerritories.find(t => {
+        // Check if this territory is a neighbor of any selected capital
+        const isNeighborOfSelected = selectedIds.some(selectedId => 
+          t.neighbors.includes(selectedId)
+        );
+        // Also check if any selected capital is a neighbor of this territory
+        const hasSelectedNeighbor = selectedIds.some(selectedId => {
+          const selectedTerritory = territories.find(st => st.id === selectedId);
+          return selectedTerritory?.neighbors.includes(t.id);
+        });
+        
+        return !isNeighborOfSelected && !hasSelectedNeighbor && !selectedIds.includes(t.id);
+      });
+      
+      if (validTerritory) {
+        selectedIds.push(validTerritory.id);
+        // Remove from available list
+        const index = availableTerritories.findIndex(t => t.id === validTerritory.id);
+        if (index > -1) availableTerritories.splice(index, 1);
+      } else {
+        // Fallback: if no valid territory found, just pick any remaining
+        const fallbackTerritory = availableTerritories.find(t => !selectedIds.includes(t.id));
+        if (fallbackTerritory) {
+          selectedIds.push(fallbackTerritory.id);
+          const index = availableTerritories.findIndex(t => t.id === fallbackTerritory.id);
+          if (index > -1) availableTerritories.splice(index, 1);
+        }
+      }
+    }
+    
+    return selectedIds;
+  }, []);
+
+  // Initialize game with players - auto-assign starting territories randomly (non-neighboring)
+  const startGame = useCallback((playerData: Omit<Player, 'territories' | 'capitalId' | 'isEliminated' | 'score'>[]) => {
     // Create a fresh copy of territories - all neutral at start
     const newTerritories = initialTerritories.map(t => ({ ...t, ownerId: null, isCapital: false }));
+    
+    // Get random starting territories that don't neighbor each other
+    const startingTerritoryIds = getRandomNonNeighboringCapitals(playerData.length, newTerritories);
     
     // Create players WITHOUT territories yet (they'll be assigned via animation)
     const players: Player[] = playerData.map((p) => ({
@@ -219,7 +265,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     setTimeout(() => {
       processInitialAssignments(players, startingTerritoryIds);
     }, 500);
-  }, [processInitialAssignments]);
+  }, [processInitialAssignments, getRandomNonNeighboringCapitals]);
 
   // Handle answer submission - use functional update to get latest state
   const submitAnswer = useCallback((answer: Answer) => {
