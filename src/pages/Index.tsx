@@ -1,14 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { MultiplayerLobby } from '@/components/game/MultiplayerLobby';
 import { GameBoard } from '@/components/game/GameBoard';
 import { GameOverScreen } from '@/components/game/GameOverScreen';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useGameState } from '@/hooks/useGameState';
+import { useBotPlayer } from '@/hooks/useBotPlayer';
 import { Player, Answer } from '@/types/game';
 
 const Index = () => {
   const multiplayer = useMultiplayer();
   const localGame = useGameState();
+  const botPlayer = useBotPlayer();
+  const [isSinglePlayer, setIsSinglePlayer] = useState(false);
+  const humanPlayerIdRef = useRef<string | null>(null);
   
   const {
     sessionCode,
@@ -47,8 +51,26 @@ const Index = () => {
     if (!isHost || players.length < 2) return;
     
     // Use localGame to start and sync state
-    localGame.startGame(players.map(p => ({ id: p.id, name: p.name, color: p.color })));
+    localGame.startGame(players.map(p => ({ id: p.id, name: p.name, color: p.color, isBot: p.isBot })));
   }, [isHost, players, localGame]);
+
+  // Handle starting single player game with bots
+  const handleStartSinglePlayer = useCallback((playerName: string) => {
+    const humanPlayer = {
+      id: `player_${Date.now()}`,
+      name: playerName,
+      color: 'red' as const,
+      isBot: false,
+    };
+    
+    humanPlayerIdRef.current = humanPlayer.id;
+    
+    // Create 2 bots with different colors
+    const bots = botPlayer.createBots(2, [humanPlayer.color]);
+    
+    setIsSinglePlayer(true);
+    localGame.startGame([humanPlayer, ...bots]);
+  }, [botPlayer, localGame]);
 
   // Sync local game state changes to multiplayer session
   useEffect(() => {
@@ -56,6 +78,66 @@ const Index = () => {
       syncGameState(localGame.gameState);
     }
   }, [isInSession, isHost, localGame.gameState, syncGameState]);
+
+  // Schedule bot answers when in single player mode and question changes
+  useEffect(() => {
+    if (!isSinglePlayer) return;
+    
+    const { currentQuestion, phase: currentPhase, attackingPlayerId, defendingPlayerId } = localGame.gameState;
+    if (!currentQuestion) return;
+    
+    // Get bots that should answer this question
+    let botsToAnswer: Player[] = [];
+    
+    if (currentPhase === 'settlement') {
+      // All bots answer in settlement phase
+      botsToAnswer = localGame.gameState.players.filter(p => p.isBot && !p.isEliminated);
+    } else if (currentPhase === 'war' || currentPhase === 'capital_battle') {
+      // Only bots involved in battle answer
+      botsToAnswer = localGame.gameState.players.filter(p => 
+        p.isBot && !p.isEliminated && 
+        (p.id === attackingPlayerId || p.id === defendingPlayerId)
+      );
+    }
+    
+    if (botsToAnswer.length > 0) {
+      botPlayer.scheduleBotAnswers(
+        botsToAnswer,
+        currentQuestion,
+        'medium',
+        (answer) => localGame.submitAnswer(answer)
+      );
+    }
+    
+    return () => {
+      botPlayer.cancelPendingAnswers();
+    };
+  }, [isSinglePlayer, localGame.gameState.currentQuestion, localGame.gameState.phase, botPlayer, localGame]);
+
+  // Auto-select attack target for bot's turn in war phase
+  useEffect(() => {
+    if (!isSinglePlayer) return;
+    
+    const { phase: currentPhase, currentTurnPlayerId, attackingPlayerId } = localGame.gameState;
+    
+    // Only auto-attack if it's a bot's turn and we're waiting for target selection
+    if (currentPhase === 'war' && currentTurnPlayerId && !attackingPlayerId) {
+      const currentPlayer = localGame.gameState.players.find(p => p.id === currentTurnPlayerId);
+      
+      if (currentPlayer?.isBot) {
+        // Bot selects a random attackable territory after a short delay
+        const attackable = localGame.getAttackableTerritories();
+        if (attackable.length > 0) {
+          const delay = 1000 + Math.random() * 1500;
+          const timeoutId = setTimeout(() => {
+            const targetId = attackable[Math.floor(Math.random() * attackable.length)];
+            localGame.selectAttackTarget(targetId);
+          }, delay);
+          return () => clearTimeout(timeoutId);
+        }
+      }
+    }
+  }, [isSinglePlayer, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.attackingPlayerId, localGame]);
 
   // Handle answer submission
   const handleSubmitAnswer = useCallback((answer: Answer) => {
@@ -98,13 +180,16 @@ const Index = () => {
     if (isInSession) {
       leaveSession();
     }
+    setIsSinglePlayer(false);
+    humanPlayerIdRef.current = null;
+    botPlayer.cancelPendingAnswers();
     localGame.resetGame();
-  }, [isInSession, leaveSession, localGame]);
+  }, [isInSession, leaveSession, localGame, botPlayer]);
 
   // Waiting room / Lobby - check if not in active game or multiplayer waiting
   const isWaitingPhase = phase === 'lobby' || (mpGameState.phase as string) === 'waiting';
   
-  if (!isInSession || isWaitingPhase) {
+  if (!isSinglePlayer && (!isInSession || isWaitingPhase)) {
     return (
       <MultiplayerLobby
         sessionCode={sessionCode}
@@ -118,6 +203,7 @@ const Index = () => {
         onStartGame={handleStartGame}
         onLeaveSession={leaveSession}
         onSelectRole={handleSelectRole}
+        onStartSinglePlayer={handleStartSinglePlayer}
       />
     );
   }

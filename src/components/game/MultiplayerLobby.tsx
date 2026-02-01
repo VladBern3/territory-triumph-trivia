@@ -3,7 +3,7 @@ import { Player } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Crown, Users, Swords, Castle, Copy, Check, Loader2, ArrowLeft, UserPlus, Plus, Trash2 } from 'lucide-react';
+import { Crown, Users, Swords, Castle, Copy, Check, Loader2, ArrowLeft, UserPlus, Plus, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MultiplayerLobbyProps {
@@ -18,6 +18,7 @@ interface MultiplayerLobbyProps {
   onStartGame: () => void;
   onLeaveSession: () => void;
   onSelectRole: (playerId: string) => void;
+  onStartSinglePlayer: (playerName: string) => void;
 }
 
 const playerColors: Array<'red' | 'blue' | 'green' | 'yellow'> = ['red', 'blue', 'green', 'yellow'];
@@ -48,8 +49,9 @@ export function MultiplayerLobby({
   onStartGame,
   onLeaveSession,
   onSelectRole,
+  onStartSinglePlayer,
 }: MultiplayerLobbyProps) {
-  const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting'>('menu');
+  const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting' | 'singleplayer'>('menu');
   const [playerName, setPlayerName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [copied, setCopied] = useState(false);
@@ -147,6 +149,16 @@ export function MultiplayerLobby({
             >
               <Plus className="w-5 h-5 mr-2" />
               Создать игру
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setMode('singleplayer')}
+              className="w-full"
+            >
+              <Bot className="w-5 h-5 mr-2" />
+              Одиночная игра
             </Button>
             
             <Button
@@ -274,6 +286,78 @@ export function MultiplayerLobby({
                 <UserPlus className="w-4 h-4 mr-2" />
               )}
               Присоединиться
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Single player setup screen
+  if (mode === 'singleplayer') {
+    const handleStartSinglePlayer = () => {
+      if (!playerName.trim()) return;
+      onStartSinglePlayer(playerName.trim());
+    };
+
+    return (
+      <div className="min-h-screen parchment-texture flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg medieval-border bg-card/95 backdrop-blur animate-scale-in">
+          <CardHeader>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="w-fit -ml-2"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Назад
+            </Button>
+            <CardTitle className="font-display text-2xl flex items-center gap-2">
+              <Bot className="w-6 h-6" />
+              Одиночная игра
+            </CardTitle>
+            <CardDescription>
+              Сразитесь против 2 компьютерных противников
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Ваше имя</label>
+              <Input
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="Введите имя..."
+                maxLength={20}
+              />
+            </div>
+
+            <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
+              <h4 className="font-medium text-sm">Ваши противники:</h4>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-player-blue flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm">Бот Алекс</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-player-green flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm">Бот Мария</span>
+              </div>
+            </div>
+            
+            <Button
+              variant="royal"
+              size="xl"
+              onClick={handleStartSinglePlayer}
+              disabled={!playerName.trim()}
+              className="w-full"
+            >
+              <Swords className="w-5 h-5 mr-2" />
+              Начать игру
             </Button>
           </CardContent>
         </Card>
