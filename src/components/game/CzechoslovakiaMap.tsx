@@ -333,7 +333,7 @@ export function CzechoslovakiaMap({
               style={{
                 left: `${xPercent}%`,
                 top: `${yPercent}%`,
-                transform: 'translate(-50%, -50%)',
+                transform: 'translate(-50%, calc(-50% - 10px))',
               }}
             >
               <TerritoryFlag 
