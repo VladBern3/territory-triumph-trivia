@@ -60,6 +60,7 @@ export function useMultiplayer() {
     settlementSelections: [],
     isSelectingSettlementTerritory: false,
   });
+  const [sessionAnswers, setSessionAnswers] = useState<Answer[]>([]);
   
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -91,6 +92,8 @@ export function useMultiplayer() {
       settlementSelections: [],
       isSelectingSettlementTerritory: false,
     });
+    // Also sync answers from session
+    setSessionAnswers(parseJsonArray<Answer>(session.answers, []));
   }, []);
 
   // Subscribe to realtime updates
@@ -287,7 +290,7 @@ export function useMultiplayer() {
     });
   };
 
-  // Submit answer (any player)
+  // Submit answer (any player) - prevents duplicate answers from same player
   const submitAnswerToSession = async (answer: Answer) => {
     if (!sessionId) return;
 
@@ -300,6 +303,13 @@ export function useMultiplayer() {
     if (!session) return;
 
     const currentAnswers = parseJsonArray<Answer>(session.answers, []);
+    
+    // Check if this player already submitted an answer for this question
+    if (currentAnswers.some(a => a.playerId === answer.playerId)) {
+      console.log('Player already submitted answer, skipping duplicate');
+      return;
+    }
+    
     const updatedAnswers = [...currentAnswers, answer];
 
     await updateSession({ answers: updatedAnswers as unknown as Json });
@@ -367,6 +377,7 @@ export function useMultiplayer() {
     isConnected,
     error,
     gameState,
+    sessionAnswers,
     isMyTurn,
     isInBattle,
     

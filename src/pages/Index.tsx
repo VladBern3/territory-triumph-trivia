@@ -30,12 +30,14 @@ const Index = () => {
     isConnected,
     error,
     gameState: mpGameState,
+    sessionAnswers,
     isMyTurn,
     isInBattle,
     createSession,
     joinSession,
     syncGameState,
     submitAnswerToSession,
+    clearAnswers,
     leaveSession,
     setLocalPlayerId,
   } = multiplayer;
@@ -114,6 +116,32 @@ const Index = () => {
       syncGameState(localGame.gameState);
     }
   }, [isInSession, isHost, localGame.gameState, syncGameState]);
+
+  // Host: sync session answers to local game for processing
+  useEffect(() => {
+    if (!isInSession || !isHost) return;
+    
+    // Sync answers from session to local game state
+    // This allows the host's useGameState to process answers when they're complete
+    sessionAnswers.forEach(answer => {
+      // Only submit if not already in local answers
+      if (!localGame.answers.some(a => a.playerId === answer.playerId)) {
+        localGame.submitAnswer(answer);
+      }
+    });
+  }, [isInSession, isHost, sessionAnswers, localGame]);
+
+  // Host: clear session answers when local answers are cleared (after processing)
+  const prevLocalAnswersLengthRef = useRef(localGame.answers.length);
+  useEffect(() => {
+    if (!isInSession || !isHost) return;
+    
+    // If local answers went from >0 to 0, clear session answers too
+    if (prevLocalAnswersLengthRef.current > 0 && localGame.answers.length === 0) {
+      clearAnswers();
+    }
+    prevLocalAnswersLengthRef.current = localGame.answers.length;
+  }, [isInSession, isHost, localGame.answers.length, clearAnswers]);
 
   // Schedule bot answers when in single player mode and question changes
   useEffect(() => {
@@ -227,15 +255,12 @@ const Index = () => {
       
       if (canAnswer) {
         submitAnswerToSession(answer);
-        // Host processes answers locally
-        if (isHost) {
-          localGame.submitAnswer(answer);
-        }
+        // Host's answers will be synced via the sessionAnswers effect
       }
     } else {
       localGame.submitAnswer(answer);
     }
-  }, [isInSession, phase, isInBattle, isHost, submitAnswerToSession, localGame]);
+  }, [isInSession, phase, isInBattle, submitAnswerToSession, localGame]);
 
   // Handle target selection (war phase)
   const handleSelectTarget = useCallback((territoryId: string) => {
@@ -353,6 +378,9 @@ const Index = () => {
   // Get the local human player ID
   const humanPlayerId = isSinglePlayer ? humanPlayerIdRef.current : localPlayerId;
 
+  // Use session answers in multiplayer, local answers otherwise
+  const collectedAnswers = isInSession ? sessionAnswers : localGame.answers;
+
   // Active game phases
   return (
     <>
@@ -364,8 +392,8 @@ const Index = () => {
         attackableTerritories={localGame.getAttackableTerritories()}
         selectableSettlementTerritories={getSelectableSettlementTerritories()}
         neighborSettlementTerritories={getNeighborSettlementTerritories()}
-        waitingForAnswers={localGame.answers.length > 0}
-        collectedAnswers={localGame.answers}
+        waitingForAnswers={collectedAnswers.length > 0}
+        collectedAnswers={collectedAnswers}
         questionStartTime={localGame.questionStartTime}
         localPlayerId={humanPlayerId}
         onSelectionTimeout={handleSelectionTimeout}
