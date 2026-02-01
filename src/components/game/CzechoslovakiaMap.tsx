@@ -211,7 +211,7 @@ export function CzechoslovakiaMap({
           dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }}
         />
         
-        {/* Attack indicator arrow - 3D style */}
+        {/* Selection indicator arrow - 3D style for settlement phase */}
         {hoveredCenter && selectableTerritories.length > 0 && selectableTerritories.includes(hoveredTerritory!) && (
           <div
             className="absolute pointer-events-none animate-bounce"
@@ -224,16 +224,17 @@ export function CzechoslovakiaMap({
           >
             {/* 3D Arrow indicator */}
             <div className="relative flex flex-col items-center">
-              {/* "АТАКА" label */}
+              {/* "ВЫБРАТЬ" label */}
               <span 
-                className="text-xs font-bold text-white px-2 py-0.5 rounded mb-1 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded mb-1 whitespace-nowrap"
                 style={{
-                  backgroundColor: 'hsl(0, 70%, 45%)',
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
                   textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
                 }}
               >
-                АТАКА
+                ВЫБРАТЬ
               </span>
               
               {/* 3D Arrow */}
@@ -249,12 +250,12 @@ export function CzechoslovakiaMap({
                 {/* Arrow back face (3D effect) */}
                 <polygon 
                   points="20,50 5,20 15,20 15,0 25,0 25,20 35,20" 
-                  fill="hsl(0, 60%, 35%)"
+                  fill="hsl(142, 60%, 25%)"
                 />
                 {/* Arrow front face */}
                 <polygon 
                   points="20,46 8,18 16,18 16,2 24,2 24,18 32,18" 
-                  fill="hsl(0, 70%, 50%)"
+                  fill="hsl(142, 70%, 40%)"
                 />
                 {/* Arrow highlight */}
                 <polygon 
