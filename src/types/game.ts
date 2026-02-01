@@ -6,6 +6,7 @@ export interface Player {
   capitalId: string | null;
   isEliminated: boolean;
   score: number;
+  isBot?: boolean;
 }
 
 export interface Territory {
