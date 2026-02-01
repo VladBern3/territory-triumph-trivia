@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CzechMap } from '@/components/game/CzechMap';
+import { CzechoslovakiaMap } from '@/components/game/CzechoslovakiaMap';
 import { initialTerritories } from '@/data/territories';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -20,7 +20,7 @@ const MapDebug = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Назад
         </Button>
-        <h1 className="font-display text-xl">Дебаг карты</h1>
+        <h1 className="font-display text-xl">Дебаг карты (Чехословакия - 18 регионов)</h1>
         {selectedTerritory && (
           <span className="text-sm text-muted-foreground">
             Выбрано: {selectedTerritory.name} ({selectedTerritory.id})
@@ -30,7 +30,7 @@ const MapDebug = () => {
 
       {/* Map */}
       <div className="flex-1 p-4">
-        <CzechMap
+        <CzechoslovakiaMap
           territories={territories}
           players={[]}
           selectedTerritoryId={selectedTerritoryId}

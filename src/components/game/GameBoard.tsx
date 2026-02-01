@@ -1,5 +1,5 @@
 import { GameState, Answer, SettlementSelection } from '@/types/game';
-import { CzechMap } from './CzechMap';
+import { CzechoslovakiaMap } from './CzechoslovakiaMap';
 import { PlayerPanel } from './PlayerPanel';
 import { QuestionModal } from './QuestionModal';
 import { BattleInfo } from './BattleInfo';
@@ -130,7 +130,7 @@ export function GameBoard({
 
       {/* Full-screen Map */}
       <div className="flex-1 flex items-center justify-center p-4 pt-16 pb-24">
-        <CzechMap
+        <CzechoslovakiaMap
           territories={territories}
           players={players}
           selectedTerritoryId={targetTerritoryId}
