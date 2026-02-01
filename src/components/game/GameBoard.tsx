@@ -151,6 +151,7 @@ export function GameBoard({
       {/* Territory Selection Timer */}
       {showSelectionTimer && currentPlayer && onSelectionTimeout && (
         <TerritorySelectionTimer
+          playerId={currentPlayer.id}
           playerName={currentPlayer.name}
           playerColor={currentPlayer.color}
           isActive={true}

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Timer, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TerritorySelectionTimerProps {
+  playerId: string; // Added to track player changes
   playerName: string;
   playerColor: 'red' | 'blue' | 'green' | 'yellow';
   isActive: boolean;
@@ -25,6 +26,7 @@ const PLAYER_BORDER_COLORS = {
 };
 
 export function TerritorySelectionTimer({
+  playerId,
   playerName,
   playerColor,
   isActive,
@@ -32,17 +34,15 @@ export function TerritorySelectionTimer({
   onTimeout,
 }: TerritorySelectionTimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [hasTriggeredTimeout, setHasTriggeredTimeout] = useState(false);
 
-  // Reset timer when becoming active
+  // Reset timer when player changes or becomes active
   useEffect(() => {
     if (isActive) {
       setTimeLeft(duration);
-      setIsAnimating(true);
-    } else {
-      setIsAnimating(false);
+      setHasTriggeredTimeout(false);
     }
-  }, [isActive, duration]);
+  }, [isActive, playerId, duration]);
 
   // Countdown timer
   useEffect(() => {
@@ -61,12 +61,13 @@ export function TerritorySelectionTimer({
     return () => clearInterval(interval);
   }, [isActive]);
 
-  // Trigger timeout callback when timer reaches 0
+  // Trigger timeout callback when timer reaches 0 (only once)
   useEffect(() => {
-    if (timeLeft === 0 && isActive) {
+    if (timeLeft === 0 && isActive && !hasTriggeredTimeout) {
+      setHasTriggeredTimeout(true);
       onTimeout();
     }
-  }, [timeLeft, isActive, onTimeout]);
+  }, [timeLeft, isActive, hasTriggeredTimeout, onTimeout]);
 
   if (!isActive) return null;
 
@@ -79,8 +80,7 @@ export function TerritorySelectionTimer({
           "relative overflow-hidden rounded-xl shadow-lg border-2",
           "bg-gradient-to-r",
           PLAYER_COLORS[playerColor],
-          PLAYER_BORDER_COLORS[playerColor],
-          isAnimating && "animate-pulse-subtle"
+          PLAYER_BORDER_COLORS[playerColor]
         )}
       >
         {/* Timer progress bar background */}
