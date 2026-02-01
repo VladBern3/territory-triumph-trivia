@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Flag } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TerritoryFlagProps {
   color: string;
@@ -8,24 +8,16 @@ interface TerritoryFlagProps {
 }
 
 export function TerritoryFlag({ color, colorValue, isFadingOut = false }: TerritoryFlagProps) {
-  const [visible, setVisible] = useState(false);
-  
-  useEffect(() => {
-    // Start fade-in animation
-    const timer = setTimeout(() => setVisible(true), 50);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Determine current state
-  const shouldShow = visible && !isFadingOut;
-
   return (
     <div 
-      className="flex flex-col items-center pointer-events-none"
+      className={cn(
+        "flex flex-col items-center pointer-events-none origin-bottom",
+        !isFadingOut && "animate-flag-plant"
+      )}
       style={{
-        opacity: shouldShow ? 1 : 0,
-        transform: shouldShow ? 'translateY(0)' : 'translateY(-20px)',
-        transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
+        opacity: isFadingOut ? 0 : 1,
+        transform: isFadingOut ? 'translateY(-20px)' : undefined,
+        transition: isFadingOut ? 'opacity 0.4s ease-out, transform 0.4s ease-out' : undefined,
       }}
     >
       {/* Flag container */}

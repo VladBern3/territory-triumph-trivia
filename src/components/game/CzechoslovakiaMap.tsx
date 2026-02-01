@@ -142,6 +142,7 @@ export function CzechoslovakiaMap({
       } else {
         // Animation complete - handle flag fade out if flag was shown
         if (shouldShowFlag) {
+          // Wait for flag-plant animation (0.5s) then start fade out
           const fadeOutTimer = setTimeout(() => {
             setVisibleFlags(current => {
               const updated = new Map(current);
@@ -163,7 +164,7 @@ export function CzechoslovakiaMap({
             }, 400);
             
             flagTimersRef.current.set(territoryId, { remove: removeTimer });
-          }, 1000); // 1 second visible before fade starts
+          }, 500); // Wait for 0.5s plant animation before fade starts
           
           flagTimersRef.current.set(territoryId, { fadeOut: fadeOutTimer });
         }
