@@ -11,7 +11,7 @@ const regionCenters: Record<string, { x: number; y: number }> = {
   "region-3": { x: 322, y: 426 },
   "region-4": { x: 363, y: 233 },
   "region-5": { x: 280, y: 120 },
-  "region-6": { x: 438, y: 88 },
+  "region-6": { x: 415, y: 66 },
   "region-7": { x: 553, y: 157 },
   "region-8": { x: 591, y: 265 },
   "region-9": { x: 515, y: 355 },
@@ -22,10 +22,9 @@ const regionCenters: Record<string, { x: number; y: number }> = {
   "region-14": { x: 825, y: 527 },
   "region-15": { x: 1020, y: 400 },
   "region-16": { x: 1320, y: 396 },
-  "region-17": { x: 1025, y: 584 },
-  "region-18": { x: 747, y: 614 },
+  "region-17": { x: 1056, y: 518 },
+  "region-18": { x: 744, y: 565 },
 };
-
 // Neighbor relationships based on SVG adjacencies
 const regionNeighbors: Record<string, string[]> = {
   "region-1": ["region-2", "region-5"],
