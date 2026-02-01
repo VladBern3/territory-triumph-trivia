@@ -12,8 +12,17 @@ interface QuestionProviders {
 }
 
 export function useGameState(questionProviders?: QuestionProviders) {
-  const getNumericQuestion = questionProviders?.getRandomNumericQuestion || (() => null);
-  const getChoiceQuestion = questionProviders?.getRandomChoiceQuestion || (() => null);
+  // Use refs to always get the latest function from providers
+  const questionProvidersRef = useRef(questionProviders);
+  questionProvidersRef.current = questionProviders;
+  
+  const getNumericQuestion = useCallback(() => {
+    return questionProvidersRef.current?.getRandomNumericQuestion() || null;
+  }, []);
+  
+  const getChoiceQuestion = useCallback(() => {
+    return questionProvidersRef.current?.getRandomChoiceQuestion() || null;
+  }, []);
   const [gameState, setGameState] = useState<GameState>({
     phase: 'lobby',
     players: [],
