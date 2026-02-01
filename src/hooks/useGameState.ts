@@ -522,7 +522,10 @@ export function useGameState(questionProviders?: QuestionProviders) {
     if (!currentSelector) return;
 
     // VALIDATE: Territory must be adjacent to player's existing territories
-    // FALLBACK: If no adjacent neutral territories exist, allow any neutral territory
+    // FALLBACK PRIORITY:
+    // 1. Adjacent neutral territories
+    // 2. Any neutral NOT adjacent to other players' capitals
+    // 3. Any neutral (including near capitals - last resort)
     const currentPlayer = gameState.players.find(p => p.id === currentSelector.playerId);
     if (!currentPlayer) return;
     
@@ -534,14 +537,36 @@ export function useGameState(questionProviders?: QuestionProviders) {
       t.ownerId === null && t.neighbors.some(nId => playerTerritoryIds.has(nId))
     );
     
-    // Only enforce adjacency if there are adjacent neutral territories available
-    if (!isAdjacent && hasAnyAdjacentNeutral) {
-      console.log('Territory is not adjacent to player territories, ignoring selection');
-      return;
-    }
-    
-    if (!isAdjacent && !hasAnyAdjacentNeutral) {
-      console.log('No adjacent neutral territories available, allowing any neutral territory');
+    // If there are adjacent neutral territories, only allow adjacent selection
+    if (hasAnyAdjacentNeutral) {
+      if (!isAdjacent) {
+        console.log('Territory is not adjacent to player territories, ignoring selection');
+        return;
+      }
+    } else {
+      // No adjacent neutral territories - use fallback logic
+      // Get all other players' capital IDs
+      const otherCapitalIds = new Set(
+        gameState.players
+          .filter(p => p.id !== currentPlayer.id && p.capitalId)
+          .map(p => p.capitalId!)
+      );
+      
+      // Check if this territory is adjacent to another player's capital
+      const isAdjacentToOtherCapital = territory.neighbors.some(nId => otherCapitalIds.has(nId));
+      
+      // Check if there are any neutral territories NOT adjacent to other capitals
+      const hasNeutralNotNearCapitals = gameState.territories.some(t => 
+        t.ownerId === null && !t.neighbors.some(nId => otherCapitalIds.has(nId))
+      );
+      
+      // If there are neutral territories not near capitals, don't allow selecting ones near capitals
+      if (isAdjacentToOtherCapital && hasNeutralNotNearCapitals) {
+        console.log('Territory is adjacent to another player capital, and safer options exist');
+        return;
+      }
+      
+      console.log('No adjacent neutral territories available, using fallback selection');
     }
 
     // Lock to prevent duplicate calls
@@ -655,7 +680,10 @@ export function useGameState(questionProviders?: QuestionProviders) {
   }, [gameState.players, gameState.territories, gameState.currentTurnPlayerId]);
 
   // Get neighbor territories for settlement (neutral territories adjacent to current player's territories)
-  // FALLBACK: If no adjacent neutral territories exist, return all neutral territories
+  // FALLBACK PRIORITY:
+  // 1. Adjacent neutral territories
+  // 2. Any neutral NOT adjacent to other players' capitals
+  // 3. Any neutral (including near capitals - last resort)
   const getNeighborSettlementTerritories = useCallback(() => {
     const currentPlayer = gameState.players.find(p => p.id === gameState.currentTurnPlayerId);
     if (!currentPlayer) return [];
@@ -663,26 +691,52 @@ export function useGameState(questionProviders?: QuestionProviders) {
     const playerTerritoryIds = new Set(currentPlayer.territories);
     const neighborNeutral: string[] = [];
     const allNeutral: string[] = [];
+    const neutralNotNearCapitals: string[] = [];
+    
+    // Get all other players' capital IDs
+    const otherCapitalIds = new Set(
+      gameState.players
+        .filter(p => p.id !== currentPlayer.id && p.capitalId)
+        .map(p => p.capitalId!)
+    );
     
     gameState.territories.forEach(territory => {
       // Only include neutral territories
       if (territory.ownerId === null) {
         allNeutral.push(territory.id);
+        
         // Check if any of its neighbors belong to the current player
         const hasAdjacentTerritory = territory.neighbors.some(nId => playerTerritoryIds.has(nId));
         if (hasAdjacentTerritory) {
           neighborNeutral.push(territory.id);
         }
+        
+        // Check if NOT adjacent to any other player's capital
+        const isAdjacentToOtherCapital = territory.neighbors.some(nId => otherCapitalIds.has(nId));
+        if (!isAdjacentToOtherCapital) {
+          neutralNotNearCapitals.push(territory.id);
+        }
       }
     });
     
-    // If no adjacent neutral territories, return all neutral (fallback)
-    if (neighborNeutral.length === 0 && allNeutral.length > 0) {
-      console.log('No adjacent neutral territories, allowing all neutral territories');
+    // Priority 1: Adjacent neutral territories
+    if (neighborNeutral.length > 0) {
+      return neighborNeutral;
+    }
+    
+    // Priority 2: Neutral territories NOT near other capitals
+    if (neutralNotNearCapitals.length > 0) {
+      console.log('No adjacent neutral, allowing neutral NOT near other capitals');
+      return neutralNotNearCapitals;
+    }
+    
+    // Priority 3: Any neutral (including near capitals - last resort)
+    if (allNeutral.length > 0) {
+      console.log('No safe options, allowing all neutral including near capitals');
       return allNeutral;
     }
     
-    return neighborNeutral;
+    return [];
   }, [gameState.players, gameState.territories, gameState.currentTurnPlayerId]);
 
   // Reset game
