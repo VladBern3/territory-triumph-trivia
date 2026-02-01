@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { GameState, Player, Territory, Answer, Question, TerritoryAnimation } from '@/types/game';
 import { initialTerritories, getMaximallyDistantTerritories } from '@/data/territories';
 
@@ -158,38 +158,46 @@ export function useGameState(questionProviders?: QuestionProviders) {
     }, 500);
   }, [processInitialAssignments]);
 
-  // Handle answer submission
+  // Handle answer submission - use functional update to get latest state
   const submitAnswer = useCallback((answer: Answer) => {
+    console.log('submitAnswer called:', answer);
+    
     setAnswers(prev => {
-      const newAnswers = [...prev, answer];
-      
-      // Check if all active players have answered
-      const activePlayers = gameState.players.filter(p => !p.isEliminated);
-      
-      if (newAnswers.length >= activePlayers.length) {
-        // Process all answers
-        setTimeout(() => processAnswers(newAnswers), 500);
+      // Avoid duplicate answers from same player
+      if (prev.some(a => a.playerId === answer.playerId)) {
+        console.log('Duplicate answer ignored');
+        return prev;
       }
+      
+      const newAnswers = [...prev, answer];
+      console.log('Current answers count:', newAnswers.length);
       
       return newAnswers;
     });
-  }, [gameState.players]);
+  }, []);
 
-  // Process answers after all players respond
-  const processAnswers = useCallback((submittedAnswers: Answer[]) => {
-    const { currentQuestion, phase } = gameState;
+  // Effect to process answers when all players have responded
+  useEffect(() => {
+    const { phase, currentQuestion, players } = gameState;
     
-    if (!currentQuestion) return;
+    if (!currentQuestion || answers.length === 0) return;
     
-    if (phase === 'settlement') {
-      processSettlementAnswers(submittedAnswers, currentQuestion);
-    } else if (phase === 'war' || phase === 'capital_battle') {
-      processWarAnswers(submittedAnswers, currentQuestion);
+    const activePlayers = players.filter(p => !p.isEliminated);
+    console.log('Checking answers:', answers.length, 'vs active players:', activePlayers.length);
+    
+    if (phase === 'settlement' && answers.length >= activePlayers.length) {
+      console.log('Processing settlement answers...');
+      processSettlementAnswers(answers, currentQuestion);
+    } else if ((phase === 'war' || phase === 'capital_battle') && answers.length >= 2) {
+      console.log('Processing war answers...');
+      processWarAnswers(answers, currentQuestion);
     }
-  }, [gameState]);
+  }, [answers, gameState.phase, gameState.currentQuestion, gameState.players]);
 
-  const processSettlementAnswers = async (submittedAnswers: Answer[], question: Question) => {
+  // Process settlement phase answers
+  const processSettlementAnswers = useCallback(async (submittedAnswers: Answer[], question: Question) => {
     const correctAnswer = Number(question.correctAnswer);
+    console.log('Correct answer:', correctAnswer);
     
     // Sort by distance to correct answer, then by timestamp (closer = better)
     const sorted = [...submittedAnswers].sort((a, b) => {
@@ -199,53 +207,82 @@ export function useGameState(questionProviders?: QuestionProviders) {
       return a.timestamp - b.timestamp;
     });
 
-    // First place gets 2 territories (each worth 200 points)
+    console.log('Sorted answers:', sorted.map(s => ({ playerId: s.playerId, answer: s.answer, dist: Math.abs(Number(s.answer) - correctAnswer) })));
+
+    // Clear answers immediately to prevent reprocessing
+    setAnswers([]);
+
+    // Get current neutral territories from state
+    let currentTerritories = [...gameState.territories];
+    
+    // First place gets 2 territories
     if (sorted[0]) {
-      let available = gameState.territories.filter(t => t.ownerId === null);
+      let available = currentTerritories.filter(t => t.ownerId === null);
+      console.log('First place:', sorted[0].playerId, 'available territories:', available.length);
+      
       if (available.length > 0) {
         await animateCapture(available[0].id, sorted[0].playerId, false);
+        currentTerritories = currentTerritories.map(t => 
+          t.id === available[0].id ? { ...t, ownerId: sorted[0].playerId } : t
+        );
       }
-      // Get fresh list after first capture
-      available = gameState.territories.filter(t => t.ownerId === null);
+      
+      // Second territory for first place
+      available = currentTerritories.filter(t => t.ownerId === null);
       if (available.length > 0) {
         await animateCapture(available[0].id, sorted[0].playerId, false);
+        currentTerritories = currentTerritories.map(t => 
+          t.id === available[0].id ? { ...t, ownerId: sorted[0].playerId } : t
+        );
       }
     }
     
-    // Second place gets 1 territory (worth 200 points)
+    // Second place gets 1 territory
     if (sorted[1]) {
-      const available = gameState.territories.filter(t => t.ownerId === null);
+      const available = currentTerritories.filter(t => t.ownerId === null);
+      console.log('Second place:', sorted[1].playerId, 'available territories:', available.length);
+      
       if (available.length > 0) {
         await animateCapture(available[0].id, sorted[1].playerId, false);
+        currentTerritories = currentTerritories.map(t => 
+          t.id === available[0].id ? { ...t, ownerId: sorted[1].playerId } : t
+        );
       }
     }
     
     // Third place gets nothing
+    console.log('Third place gets nothing');
     
-    // After all animations, check if settlement phase is over and move to next round
+    // After all animations, move to next round
     setGameState(prev => {
       const stillNeutral = prev.territories.filter(t => t.ownerId === null);
-      const newPhase = stillNeutral.length <= 1 ? 'war' : 'settlement';
+      const newRound = prev.roundNumber + 1;
+      
+      // Settlement lasts 5 rounds, then switch to war
+      const newPhase = newRound > 5 || stillNeutral.length <= 1 ? 'war' : 'settlement';
+      
+      console.log('Settlement round complete. Neutral left:', stillNeutral.length, 'New phase:', newPhase, 'Round:', newRound);
       
       // Get next question
       const nextQuestion = newPhase === 'war' 
         ? getChoiceQuestion()
         : getNumericQuestion();
       
-      setAnswers([]);
-      
       const activePlayers = prev.players.filter(p => !p.isEliminated);
-      const nextPlayer = activePlayers[prev.roundNumber % activePlayers.length];
+      const nextPlayer = activePlayers[newRound % activePlayers.length];
       
       return {
         ...prev,
         phase: newPhase,
         currentQuestion: nextQuestion,
-        roundNumber: prev.roundNumber + 1,
+        roundNumber: newRound,
         currentTurnPlayerId: nextPlayer?.id || null,
+        attackingPlayerId: null,
+        defendingPlayerId: null,
+        targetTerritoryId: null,
       };
     });
-  };
+  }, [animateCapture, gameState.territories, getChoiceQuestion, getNumericQuestion]);
 
   const processWarAnswers = (submittedAnswers: Answer[], question: Question) => {
     const correctAnswer = question.correctAnswer;
