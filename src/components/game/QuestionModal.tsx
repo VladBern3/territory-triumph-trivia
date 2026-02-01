@@ -13,6 +13,7 @@ interface QuestionModalProps {
   onSubmitAnswer: (answer: Answer) => void;
   capitalBattleRound?: number;
   currentPlayerId?: string | null;
+  localPlayerId?: string | null;
   players: Player[];
   collectedAnswers?: Answer[];
   questionStartTime?: number;
@@ -34,6 +35,7 @@ export function QuestionModal({
   onSubmitAnswer,
   capitalBattleRound = 0,
   currentPlayerId,
+  localPlayerId,
   players,
   collectedAnswers = [],
   questionStartTime,
@@ -47,6 +49,12 @@ export function QuestionModal({
   const expectedAnswerCount = isSettlement 
     ? players.filter(p => !p.isEliminated).length 
     : 2; // War phase: attacker and defender
+  
+  // For settlement phase, use the local player ID (human answering)
+  // For war phase, use the attacker ID (only battle participants answer)
+  const answeringPlayerId = isSettlement 
+    ? (localPlayerId || players.find(p => !p.isBot)?.id || players[0]?.id || '')
+    : (attacker?.id || currentPlayerId || '');
 
   return (
     <Dialog open={isOpen} modal>
@@ -63,7 +71,7 @@ export function QuestionModal({
           <QuestionCard
             question={question}
             onAnswer={onSubmitAnswer}
-            playerId={currentPlayerId || players[0]?.id || ''}
+            playerId={answeringPlayerId}
             timeLimit={10}
             showHint={true}
             collectedAnswers={collectedAnswers}
@@ -112,7 +120,7 @@ export function QuestionModal({
             <QuestionCard
               question={question}
               onAnswer={onSubmitAnswer}
-              playerId={attacker?.id || currentPlayerId || ''}
+              playerId={answeringPlayerId}
               timeLimit={10}
               collectedAnswers={collectedAnswers}
               players={players}

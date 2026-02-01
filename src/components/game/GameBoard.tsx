@@ -16,6 +16,7 @@ interface GameBoardProps {
   waitingForAnswers: boolean;
   collectedAnswers?: Answer[];
   questionStartTime?: number;
+  localPlayerId?: string | null;
 }
 
 export function GameBoard({
@@ -28,6 +29,7 @@ export function GameBoard({
   waitingForAnswers,
   collectedAnswers = [],
   questionStartTime = Date.now(),
+  localPlayerId,
 }: GameBoardProps) {
   const {
     phase,
@@ -201,6 +203,7 @@ export function GameBoard({
         onSubmitAnswer={onSubmitAnswer}
         capitalBattleRound={capitalBattleRound}
         currentPlayerId={currentTurnPlayerId}
+        localPlayerId={localPlayerId}
         players={players}
         collectedAnswers={collectedAnswers}
         questionStartTime={questionStartTime}
