@@ -12,13 +12,8 @@ export function TerritoryFlag({ color, colorValue, isFadingOut = false }: Territ
     <div 
       className={cn(
         "flex flex-col items-center pointer-events-none origin-bottom",
-        !isFadingOut && "animate-flag-plant"
+        isFadingOut ? "animate-flag-leave" : "animate-flag-plant"
       )}
-      style={{
-        opacity: isFadingOut ? 0 : 1,
-        transform: isFadingOut ? 'translateY(-20px)' : undefined,
-        transition: isFadingOut ? 'opacity 0.4s ease-out, transform 0.4s ease-out' : undefined,
-      }}
     >
       {/* Flag container */}
       <div 

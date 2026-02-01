@@ -153,7 +153,7 @@ export function CzechoslovakiaMap({
               return updated;
             });
             
-            // Remove flag completely after fade animation (400ms)
+            // Remove flag completely after leave animation (500ms)
             const removeTimer = setTimeout(() => {
               setVisibleFlags(current => {
                 const updated = new Map(current);
@@ -161,7 +161,7 @@ export function CzechoslovakiaMap({
                 return updated;
               });
               flagTimersRef.current.delete(territoryId);
-            }, 400);
+            }, 500);
             
             flagTimersRef.current.set(territoryId, { remove: removeTimer });
           }, 500); // Wait for 0.5s plant animation before fade starts
