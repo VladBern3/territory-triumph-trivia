@@ -201,6 +201,11 @@ export function QuestionCard({
                   placeholder="Введите число..."
                   value={numericAnswer}
                   onChange={(e) => setNumericAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && numericAnswer && !isSubmitted) {
+                      handleSubmit();
+                    }
+                  }}
                   disabled={isSubmitted}
                   className="text-lg text-center font-mono"
                   autoFocus
