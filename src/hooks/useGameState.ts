@@ -475,6 +475,18 @@ export function useGameState(questionProviders?: QuestionProviders) {
     
     if (!currentSelector) return;
 
+    // VALIDATE: Territory must be adjacent to player's existing territories
+    const currentPlayer = gameState.players.find(p => p.id === currentSelector.playerId);
+    if (!currentPlayer) return;
+    
+    const playerTerritoryIds = new Set(currentPlayer.territories);
+    const isAdjacent = territory.neighbors.some(nId => playerTerritoryIds.has(nId));
+    
+    if (!isAdjacent) {
+      console.log('Territory is not adjacent to player territories, ignoring selection');
+      return;
+    }
+
     // Lock to prevent duplicate calls
     selectionInProgressRef.current = true;
 
