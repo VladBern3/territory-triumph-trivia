@@ -28,10 +28,10 @@ const regionCenters: Record<string, { x: number; y: number }> = {
 
 // Neighbor relationships based on SVG adjacencies
 const regionNeighbors: Record<string, string[]> = {
-  "region-1": ["region-2", "region-5"],
+  "region-1": ["region-2", "region-4", "region-5"],
   "region-2": ["region-1", "region-3", "region-4", "region-5"],
   "region-3": ["region-2", "region-4", "region-9", "region-10"],
-  "region-4": ["region-2", "region-3", "region-5", "region-6", "region-7", "region-9", "region-8"],
+  "region-4": ["region-1", "region-2", "region-3", "region-5", "region-6", "region-7", "region-9", "region-8"],
   "region-5": ["region-1", "region-4", "region-6"],
   "region-6": ["region-4", "region-5", "region-7"],
   "region-7": ["region-4", "region-6", "region-8"],
@@ -40,12 +40,12 @@ const regionNeighbors: Record<string, string[]> = {
   "region-10": ["region-3", "region-9", "region-11", "region-13", "region-14"],
   "region-11": ["region-8", "region-10", "region-12", "region-13"],
   "region-12": ["region-11", "region-13", "region-15"],
-  "region-13": ["region-10", "region-11", "region-12", "region-14", "region-15", "region-18"],
+  "region-13": ["region-10", "region-11", "region-12", "region-14", "region-15"],
   "region-14": ["region-13", "region-15", "region-17", "region-18", "region-10"],
   "region-15": ["region-12", "region-13", "region-14", "region-16", "region-17"],
   "region-16": ["region-15", "region-17"],
   "region-17": ["region-14", "region-15", "region-16"],
-  "region-18": ["region-3", "region-13", "region-14"],
+  "region-18": ["region-14"],
 };
 
 // Generate 18 territories (SVG has 18 paths, lines 2-19)
