@@ -156,6 +156,7 @@ export function GameBoard({
           playerColor={currentPlayer.color}
           isActive={true}
           duration={15}
+          remainingSelections={currentSelector?.territoriesRemaining ?? 1}
           onTimeout={onSelectionTimeout}
         />
       )}
