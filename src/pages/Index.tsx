@@ -262,6 +262,9 @@ const Index = () => {
     return <GameOverScreen winner={winner} onPlayAgain={handleReset} />;
   }
 
+  // Get the local human player ID
+  const humanPlayerId = isSinglePlayer ? humanPlayerIdRef.current : localPlayerId;
+
   // Active game phases
   return (
     <GameBoard
@@ -274,6 +277,7 @@ const Index = () => {
       waitingForAnswers={localGame.answers.length > 0}
       collectedAnswers={localGame.answers}
       questionStartTime={localGame.questionStartTime}
+      localPlayerId={humanPlayerId}
     />
   );
 };
