@@ -320,10 +320,10 @@ export function useGameState(questionProviders?: QuestionProviders) {
       
       // Calculate total results display time:
       // - 1 second per player answer animation
-      // - 3 seconds delay before correct answer
-      // - 1 second to view correct answer
+      // - 2 seconds delay before correct answer
+      // - 3 seconds to view correct answer
       const totalAnswers = activePlayers.length;
-      const resultsDisplayTime = (totalAnswers * 1000) + 3000 + 1000;
+      const resultsDisplayTime = (totalAnswers * 1000) + 2000 + 3000;
       
       setTimeout(() => {
         console.log('Processing settlement answers...');
@@ -338,8 +338,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
       }
       setIsShowingResults(true);
       
-      // War phase: 2 players, so 2 seconds + 3 seconds + 1 second = 6 seconds
-      const resultsDisplayTime = (2 * 1000) + 3000 + 1000;
+      // War phase: 2 players, so 2 seconds + 2 seconds + 3 seconds = 7 seconds
+      const resultsDisplayTime = (2 * 1000) + 2000 + 3000;
       
       setTimeout(() => {
         console.log('Processing war answers...');
