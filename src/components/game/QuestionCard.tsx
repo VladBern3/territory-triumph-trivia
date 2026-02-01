@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Question, Answer } from '@/types/game';
+import { useState, useEffect, useRef } from 'react';
+import { Question, Answer, Player } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AnswerResultsDisplay } from './AnswerResultsDisplay';
 
 interface QuestionCardProps {
   question: Question;
@@ -12,6 +13,9 @@ interface QuestionCardProps {
   playerId: string;
   timeLimit?: number; // in seconds
   showHint?: boolean;
+  collectedAnswers?: Answer[];
+  players?: Player[];
+  expectedAnswerCount?: number;
 }
 
 export function QuestionCard({
@@ -20,14 +24,37 @@ export function QuestionCard({
   playerId,
   timeLimit = 15,
   showHint = false,
+  collectedAnswers = [],
+  players = [],
+  expectedAnswerCount = 1,
 }: QuestionCardProps) {
   const [numericAnswer, setNumericAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const questionStartTimeRef = useRef(Date.now());
 
+  // Reset state when question changes
   useEffect(() => {
-    if (isSubmitted) return;
+    setNumericAnswer('');
+    setSelectedOption(null);
+    setTimeLeft(timeLimit);
+    setIsSubmitted(false);
+    setShowResults(false);
+    questionStartTimeRef.current = Date.now();
+  }, [question.id, timeLimit]);
+
+  // Check if all answers are collected
+  useEffect(() => {
+    if (collectedAnswers.length >= expectedAnswerCount && expectedAnswerCount > 0) {
+      setShowResults(true);
+    }
+  }, [collectedAnswers.length, expectedAnswerCount]);
+
+  // Timer runs until submitted or time runs out
+  useEffect(() => {
+    if (isSubmitted || showResults) return;
     
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -40,7 +67,7 @@ export function QuestionCard({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isSubmitted]);
+  }, [isSubmitted, showResults]);
 
   const handleSubmit = () => {
     if (isSubmitted) return;
@@ -62,6 +89,27 @@ export function QuestionCard({
 
   const timerPercentage = (timeLeft / timeLimit) * 100;
   const timerColor = timeLeft <= 5 ? 'bg-destructive' : timeLeft <= 10 ? 'bg-primary' : 'bg-green-500';
+
+  // Show results view when all answers are collected
+  if (showResults && collectedAnswers.length > 0) {
+    return (
+      <Card className="medieval-border bg-card max-w-2xl mx-auto animate-scale-in">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-xl text-center">
+            Результаты раунда
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AnswerResultsDisplay
+            answers={collectedAnswers}
+            players={players}
+            question={question}
+            questionStartTime={questionStartTimeRef.current}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="medieval-border bg-card max-w-2xl mx-auto animate-scale-in">
@@ -98,51 +146,68 @@ export function QuestionCard({
           </p>
         )}
         
-        {question.type === 'numeric' ? (
-          <div className="space-y-3">
-            <Input
-              type="number"
-              placeholder="Введите число..."
-              value={numericAnswer}
-              onChange={(e) => setNumericAnswer(e.target.value)}
-              disabled={isSubmitted}
-              className="text-lg text-center font-mono"
-              autoFocus
-            />
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitted || !numericAnswer}
-              variant="royal"
-              size="lg"
-              className="w-full"
-            >
-              {isSubmitted ? 'Ответ отправлен' : 'Ответить'}
-            </Button>
+        {/* Show waiting indicator if already submitted but waiting for others */}
+        {isSubmitted && !showResults && (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground animate-pulse">
+              Ожидаем ответы других игроков...
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Ответили: {collectedAnswers.length} / {expectedAnswerCount}
+            </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {question.options?.map((option, index) => (
-              <Button
-                key={option}
-                onClick={() => {
-                  handleOptionClick(option);
-                  setTimeout(handleSubmit, 200);
-                }}
-                disabled={isSubmitted}
-                variant={selectedOption === option ? 'royal' : 'parchment'}
-                size="lg"
-                className={cn(
-                  'text-left justify-start h-auto py-4 px-4',
-                  selectedOption === option && 'ring-2 ring-primary'
-                )}
-              >
-                <span className="font-display font-bold text-primary mr-3">
-                  {String.fromCharCode(65 + index)}.
-                </span>
-                {option}
-              </Button>
-            ))}
-          </div>
+        )}
+        
+        {/* Input section - hide if submitted */}
+        {!isSubmitted && (
+          <>
+            {question.type === 'numeric' ? (
+              <div className="space-y-3">
+                <Input
+                  type="number"
+                  placeholder="Введите число..."
+                  value={numericAnswer}
+                  onChange={(e) => setNumericAnswer(e.target.value)}
+                  disabled={isSubmitted}
+                  className="text-lg text-center font-mono"
+                  autoFocus
+                />
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitted || !numericAnswer}
+                  variant="royal"
+                  size="lg"
+                  className="w-full"
+                >
+                  Ответить
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {question.options?.map((option, index) => (
+                  <Button
+                    key={option}
+                    onClick={() => {
+                      handleOptionClick(option);
+                      setTimeout(handleSubmit, 200);
+                    }}
+                    disabled={isSubmitted}
+                    variant={selectedOption === option ? 'royal' : 'parchment'}
+                    size="lg"
+                    className={cn(
+                      'text-left justify-start h-auto py-4 px-4',
+                      selectedOption === option && 'ring-2 ring-primary'
+                    )}
+                  >
+                    <span className="font-display font-bold text-primary mr-3">
+                      {String.fromCharCode(65 + index)}.
+                    </span>
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
