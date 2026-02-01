@@ -107,6 +107,15 @@ export default {
           from: { opacity: "0", transform: "translateY(20px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "flag-plant": {
+          "0%": { transform: "translateY(-30px)", opacity: "0" },
+          "30%": { transform: "translateY(0)", opacity: "1" },
+          "40%": { transform: "rotate(8deg)" },
+          "55%": { transform: "rotate(-6deg)" },
+          "70%": { transform: "rotate(4deg)" },
+          "85%": { transform: "rotate(-2deg)" },
+          "100%": { transform: "rotate(0deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -114,6 +123,7 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
         "slide-up": "slide-up 0.5s ease-out",
+        "flag-plant": "flag-plant 0.5s ease-out forwards",
       },
     },
   },
