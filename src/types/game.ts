@@ -62,7 +62,7 @@ export interface GameState {
 
 export interface Answer {
   playerId: string;
-  answer: number | string;
+  answer: number | string | null; // null means no answer / timeout
   timestamp: number;
 }
 

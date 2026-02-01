@@ -22,8 +22,27 @@ export function AnswerResultsDisplay({
   question,
   questionStartTime,
 }: AnswerResultsDisplayProps) {
+  // Get all active players and their answers
+  const activePlayers = players.filter(p => !p.isEliminated);
+  
+  // Create answer entries for all players (including those who didn't answer)
+  const playerAnswers = activePlayers.map(player => {
+    const answer = answers.find(a => a.playerId === player.id);
+    return {
+      player,
+      answer: answer?.answer ?? null,
+      timestamp: answer?.timestamp ?? Infinity,
+    };
+  });
+  
   // Sort answers by ranking (closest to correct, then by time)
-  const sortedAnswers = [...answers].sort((a, b) => {
+  // null answers go to the end
+  const sortedAnswers = [...playerAnswers].sort((a, b) => {
+    // null answers go last
+    if (a.answer === null && b.answer !== null) return 1;
+    if (a.answer !== null && b.answer === null) return -1;
+    if (a.answer === null && b.answer === null) return 0;
+    
     if (question.type === 'numeric') {
       const correctAnswer = Number(question.correctAnswer);
       const distA = Math.abs(Number(a.answer) - correctAnswer);
@@ -45,23 +64,26 @@ export function AnswerResultsDisplay({
       </p>
       
       <div className="grid grid-cols-1 gap-2">
-        {sortedAnswers.map((answer, index) => {
-          const player = players.find(p => p.id === answer.playerId);
-          if (!player) return null;
+        {sortedAnswers.map((entry, index) => {
+          const { player, answer, timestamp } = entry;
           
-          const timeTaken = (answer.timestamp - questionStartTime) / 1000;
-          const isCorrect = question.type === 'numeric'
-            ? Number(answer.answer) === Number(question.correctAnswer)
-            : answer.answer === question.correctAnswer;
+          const timeTaken = timestamp !== Infinity 
+            ? (timestamp - questionStartTime) / 1000 
+            : null;
+          
+          const isNoAnswer = answer === null;
+          const isCorrect = !isNoAnswer && (question.type === 'numeric'
+            ? Number(answer) === Number(question.correctAnswer)
+            : answer === question.correctAnswer);
           
           // For numeric, show distance
-          const distance = question.type === 'numeric'
-            ? Math.abs(Number(answer.answer) - Number(question.correctAnswer))
+          const distance = !isNoAnswer && question.type === 'numeric'
+            ? Math.abs(Number(answer) - Number(question.correctAnswer))
             : null;
           
           return (
             <div
-              key={answer.playerId}
+              key={player.id}
               className={cn(
                 "flex items-center justify-between px-4 py-3 rounded-lg border-2 transition-all",
                 "animate-fade-in",
@@ -77,8 +99,12 @@ export function AnswerResultsDisplay({
                 <div>
                   <p className="font-semibold">{player.name}</p>
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="font-mono">{answer.answer}</span>
-                    {isCorrect ? (
+                    <span className={cn("font-mono", isNoAnswer && "text-muted-foreground")}>
+                      {isNoAnswer ? '—' : answer}
+                    </span>
+                    {isNoAnswer ? (
+                      <span className="text-muted-foreground text-xs">(нет ответа)</span>
+                    ) : isCorrect ? (
                       <Check className="w-4 h-4 text-green-500" />
                     ) : (
                       <>
@@ -97,7 +123,9 @@ export function AnswerResultsDisplay({
               {/* Time taken */}
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="w-4 h-4" />
-                <span className="font-mono">{timeTaken.toFixed(2)}с</span>
+                <span className="font-mono">
+                  {timeTaken !== null ? `${timeTaken.toFixed(2)}с` : '—'}
+                </span>
               </div>
             </div>
           );

@@ -16,6 +16,7 @@ interface QuestionCardProps {
   collectedAnswers?: Answer[];
   players?: Player[];
   expectedAnswerCount?: number;
+  questionStartTime?: number;
 }
 
 export function QuestionCard({
@@ -27,13 +28,15 @@ export function QuestionCard({
   collectedAnswers = [],
   players = [],
   expectedAnswerCount = 1,
+  questionStartTime: externalStartTime,
 }: QuestionCardProps) {
   const [numericAnswer, setNumericAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const questionStartTimeRef = useRef(Date.now());
+  const internalStartTime = useRef(Date.now());
+  const questionStartTime = externalStartTime ?? internalStartTime.current;
   const numericAnswerRef = useRef('');
   const selectedOptionRef = useRef<string | null>(null);
 
@@ -53,7 +56,7 @@ export function QuestionCard({
     setTimeLeft(timeLimit);
     setIsSubmitted(false);
     setShowResults(false);
-    questionStartTimeRef.current = Date.now();
+    internalStartTime.current = Date.now();
     numericAnswerRef.current = '';
     selectedOptionRef.current = null;
   }, [question.id, timeLimit]);
@@ -134,7 +137,7 @@ export function QuestionCard({
             answers={collectedAnswers}
             players={players}
             question={question}
-            questionStartTime={questionStartTimeRef.current}
+            questionStartTime={questionStartTime}
           />
         </CardContent>
       </Card>

@@ -273,6 +273,7 @@ const Index = () => {
       selectableSettlementTerritories={getSelectableSettlementTerritories()}
       waitingForAnswers={localGame.answers.length > 0}
       collectedAnswers={localGame.answers}
+      questionStartTime={localGame.questionStartTime}
     />
   );
 };
