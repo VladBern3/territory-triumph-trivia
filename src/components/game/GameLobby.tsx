@@ -29,7 +29,8 @@ const colorClasses = {
 export function GameLobby({ onStartGame }: GameLobbyProps) {
   const [players, setPlayers] = useState<{ id: string; name: string; color: typeof playerColors[number] }[]>([
     { id: '1', name: 'Игрок 1', color: 'red' },
-    { id: '2', name: 'Игрок 2', color: 'blue' },
+    { id: '2', name: 'Игрок 2', color: 'green' },
+    { id: '3', name: 'Игрок 3', color: 'blue' },
   ]);
 
   const addPlayer = () => {
