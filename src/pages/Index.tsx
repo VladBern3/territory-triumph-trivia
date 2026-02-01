@@ -150,6 +150,30 @@ const Index = () => {
     }
   }, [isSinglePlayer, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.attackingPlayerId, localGame]);
 
+  // Auto-select settlement territory for bot's turn
+  useEffect(() => {
+    if (!isSinglePlayer) return;
+    
+    const { phase: currentPhase, currentTurnPlayerId, isSelectingSettlementTerritory } = localGame.gameState;
+    
+    if (currentPhase === 'settlement' && isSelectingSettlementTerritory && currentTurnPlayerId) {
+      const currentPlayer = localGame.gameState.players.find(p => p.id === currentTurnPlayerId);
+      
+      if (currentPlayer?.isBot) {
+        // Bot selects a random neutral territory after a short delay
+        const neutral = localGame.neutralTerritories;
+        if (neutral.length > 0) {
+          const delay = 800 + Math.random() * 1200;
+          const timeoutId = setTimeout(() => {
+            const targetId = neutral[Math.floor(Math.random() * neutral.length)].id;
+            localGame.selectSettlementTerritory(targetId);
+          }, delay);
+          return () => clearTimeout(timeoutId);
+        }
+      }
+    }
+  }, [isSinglePlayer, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.isSelectingSettlementTerritory, localGame]);
+
   // Handle answer submission
   const handleSubmitAnswer = useCallback((answer: Answer) => {
     if (isInSession) {
@@ -180,6 +204,16 @@ const Index = () => {
       localGame.selectAttackTarget(territoryId);
     }
   }, [isInSession, isMyTurn, localGame]);
+
+  // Handle settlement territory selection
+  const handleSelectSettlementTerritory = useCallback((territoryId: string) => {
+    localGame.selectSettlementTerritory(territoryId);
+  }, [localGame]);
+
+  // Get selectable settlement territories (neutral territories)
+  const getSelectableSettlementTerritories = useCallback(() => {
+    return localGame.neutralTerritories.map(t => t.id);
+  }, [localGame.neutralTerritories]);
 
   // Handle role selection for testing
   const handleSelectRole = useCallback((playerId: string) => {
@@ -231,7 +265,9 @@ const Index = () => {
       gameState={gameState}
       onSubmitAnswer={handleSubmitAnswer}
       onSelectTarget={handleSelectTarget}
+      onSelectSettlementTerritory={handleSelectSettlementTerritory}
       attackableTerritories={localGame.getAttackableTerritories()}
+      selectableSettlementTerritories={getSelectableSettlementTerritories()}
       waitingForAnswers={localGame.answers.length > 0}
       collectedAnswers={localGame.answers}
     />
