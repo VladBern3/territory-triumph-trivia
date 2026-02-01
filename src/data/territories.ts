@@ -37,7 +37,7 @@ const regionNeighbors: Record<string, string[]> = {
   "region-7": ["region-4", "region-6", "region-8"],
   "region-8": ["region-7", "region-9", "region-11", "region-4"],
   "region-9": ["region-3", "region-4", "region-8", "region-10"],
-  "region-10": ["region-3", "region-9", "region-11", "region-13", "region-14"],
+  "region-10": ["region-3", "region-9", "region-11", "region-13", "region-14", "region-8"],
   "region-11": ["region-8", "region-10", "region-12", "region-13"],
   "region-12": ["region-11", "region-13", "region-15"],
   "region-13": ["region-10", "region-11", "region-12", "region-14", "region-15"],
