@@ -4,27 +4,28 @@ import { Flag } from 'lucide-react';
 interface TerritoryFlagProps {
   color: string;
   colorValue: string;
-  isAnimating?: boolean;
+  isFadingOut?: boolean;
 }
 
-export function TerritoryFlag({ color, colorValue, isAnimating = false }: TerritoryFlagProps) {
-  const [visible, setVisible] = useState(!isAnimating);
+export function TerritoryFlag({ color, colorValue, isFadingOut = false }: TerritoryFlagProps) {
+  const [visible, setVisible] = useState(false);
   
   useEffect(() => {
-    if (isAnimating) {
-      // Start fade-in animation
-      const timer = setTimeout(() => setVisible(true), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isAnimating]);
+    // Start fade-in animation
+    const timer = setTimeout(() => setVisible(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Determine current state
+  const shouldShow = visible && !isFadingOut;
 
   return (
     <div 
       className="flex flex-col items-center pointer-events-none"
       style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(-20px)',
-        transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+        opacity: shouldShow ? 1 : 0,
+        transform: shouldShow ? 'translateY(0)' : 'translateY(-20px)',
+        transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
       }}
     >
       {/* Flag container */}

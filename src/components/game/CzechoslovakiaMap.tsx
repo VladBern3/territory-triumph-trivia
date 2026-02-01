@@ -50,8 +50,8 @@ export function CzechoslovakiaMap({
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [animationProgress, setAnimationProgress] = useState<Record<string, number>>({});
   const [territoryCenters, setTerritoryCenters] = useState<Record<string, TerritoryCenter>>({});
-  // Track territories that should show flags (visible for 2 seconds after capture)
-  const [visibleFlags, setVisibleFlags] = useState<Map<string, { playerId: string; hideTimer: NodeJS.Timeout }>>(new Map());
+  // Track territories that should show flags with fade state
+  const [visibleFlags, setVisibleFlags] = useState<Map<string, { playerId: string; isFadingOut: boolean }>>(new Map());
 
   // Calculate territory centers from actual SVG path bounding boxes
   const calculateTerritoryCenters = useCallback(() => {
@@ -96,29 +96,25 @@ export function CzechoslovakiaMap({
   }, [svgContent, calculateTerritoryCenters]);
 
   // Handle capture animation and flag display
+  // Refs to store timer IDs so we can clean them up
+  const flagTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
+  // Handle capture animation and flag display
   useEffect(() => {
     if (!currentAnimation) return;
 
     const { territoryId, duration, startTime, playerId } = currentAnimation;
     
-    // Show flag for this territory
+    // Clear any existing timer for this territory
+    const existingTimer = flagTimersRef.current.get(territoryId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    
+    // Show flag for this territory (fade in)
     setVisibleFlags(prev => {
       const next = new Map(prev);
-      // Clear any existing timer
-      const existing = next.get(territoryId);
-      if (existing) {
-        clearTimeout(existing.hideTimer);
-      }
-      // Set up auto-hide after 2 seconds from animation end
-      const hideTimer = setTimeout(() => {
-        setVisibleFlags(current => {
-          const updated = new Map(current);
-          updated.delete(territoryId);
-          return updated;
-        });
-      }, duration + 2000); // Wait for animation to complete + 2 seconds visible
-      
-      next.set(territoryId, { playerId, hideTimer });
+      next.set(territoryId, { playerId, isFadingOut: false });
       return next;
     });
     
@@ -133,6 +129,32 @@ export function CzechoslovakiaMap({
 
       if (progress < 1) {
         requestAnimationFrame(animate);
+      } else {
+        // Animation complete - start fade out after brief delay
+        const fadeOutTimer = setTimeout(() => {
+          setVisibleFlags(current => {
+            const updated = new Map(current);
+            const existing = updated.get(territoryId);
+            if (existing) {
+              updated.set(territoryId, { ...existing, isFadingOut: true });
+            }
+            return updated;
+          });
+          
+          // Remove flag completely after fade animation
+          const removeTimer = setTimeout(() => {
+            setVisibleFlags(current => {
+              const updated = new Map(current);
+              updated.delete(territoryId);
+              return updated;
+            });
+            flagTimersRef.current.delete(territoryId);
+          }, 500); // fade out duration
+          
+          flagTimersRef.current.set(territoryId, removeTimer);
+        }, 300); // brief delay before fade starts
+        
+        flagTimersRef.current.set(territoryId, fadeOutTimer);
       }
     };
 
@@ -140,13 +162,11 @@ export function CzechoslovakiaMap({
     
     // Cleanup on unmount
     return () => {
-      setVisibleFlags(prev => {
-        const existing = prev.get(territoryId);
-        if (existing) {
-          clearTimeout(existing.hideTimer);
-        }
-        return prev;
-      });
+      const timer = flagTimersRef.current.get(territoryId);
+      if (timer) {
+        clearTimeout(timer);
+        flagTimersRef.current.delete(territoryId);
+      }
     };
   }, [currentAnimation]);
 
@@ -256,7 +276,7 @@ export function CzechoslovakiaMap({
   const territoriesWithFlags = Array.from(visibleFlags.entries()).map(([territoryId, data]) => {
     const territory = territories.find(t => t.id === territoryId);
     const owner = players.find(p => p.id === data.playerId);
-    return { territory, owner, territoryId };
+    return { territory, owner, territoryId, isFadingOut: data.isFadingOut };
   }).filter(item => item.territory && item.owner);
 
   // Get capitals with their owners for rendering crowns
@@ -313,8 +333,8 @@ export function CzechoslovakiaMap({
           <g dangerouslySetInnerHTML={{ __html: svgContent.replace(/<\/?svg[^>]*>/g, '') }} />
         </svg>
         
-        {/* Territory flags - visible for 2 seconds after capture */}
-        {territoriesWithFlags.map(({ territory, owner, territoryId }) => {
+        {/* Territory flags - visible briefly after capture */}
+        {territoriesWithFlags.map(({ territory, owner, territoryId, isFadingOut }) => {
           if (!territory || !owner) return null;
           
           const center = territoryCenters[territoryId];
@@ -336,7 +356,7 @@ export function CzechoslovakiaMap({
               <TerritoryFlag 
                 color={owner.color}
                 colorValue={playerColorValues[owner.color]}
-                isAnimating={true}
+                isFadingOut={isFadingOut}
               />
             </div>
           );
