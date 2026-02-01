@@ -1,13 +1,14 @@
 import { Answer, Player, Question } from '@/types/game';
 import { cn } from '@/lib/utils';
 import { Clock } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface AnswerResultsDisplayProps {
   answers: Answer[];
   players: Player[];
   question: Question;
   questionStartTime: number;
+  onComplete?: () => void; // Called when results display is done
 }
 
 const playerGradientClasses: Record<string, string> = {
@@ -29,9 +30,11 @@ export function AnswerResultsDisplay({
   players,
   question,
   questionStartTime,
+  onComplete,
 }: AnswerResultsDisplayProps) {
   const [visibleCount, setVisibleCount] = useState(0);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+  const hasCalledComplete = useRef(false);
 
   // Get all active players and their answers
   const activePlayers = players.filter(p => !p.isEliminated);
@@ -67,34 +70,44 @@ export function AnswerResultsDisplay({
 
   // Find the winner (first in sorted list with a valid answer)
   const winnerId = sortedAnswers.find(e => e.answer !== null)?.player.id;
+  
+  const totalAnswers = sortedAnswers.length;
 
   // Sequential reveal animation
   useEffect(() => {
     setVisibleCount(0);
     setShowCorrectAnswer(false);
+    hasCalledComplete.current = false;
 
-    const totalAnswers = sortedAnswers.length;
-    
-    // Reveal each answer one by one (1 second per answer)
     const revealTimers: NodeJS.Timeout[] = [];
     
+    // Reveal each answer one by one (1 second per answer)
     for (let i = 0; i < totalAnswers; i++) {
       const timer = setTimeout(() => {
         setVisibleCount(i + 1);
-      }, i * 1000); // 1 second delay between each
+      }, i * 1000);
       revealTimers.push(timer);
     }
 
-    // Show correct answer after all player answers + 3 seconds delay
+    // Show correct answer 3 seconds after last player answer
     const correctAnswerTimer = setTimeout(() => {
       setShowCorrectAnswer(true);
-    }, totalAnswers * 1000 + 3000); // All answers + 3 seconds
+    }, totalAnswers * 1000 + 3000);
+
+    // Call onComplete 3 seconds after correct answer is shown (total: answers + 3s + 3s)
+    const completeTimer = setTimeout(() => {
+      if (onComplete && !hasCalledComplete.current) {
+        hasCalledComplete.current = true;
+        onComplete();
+      }
+    }, totalAnswers * 1000 + 6000);
 
     return () => {
       revealTimers.forEach(t => clearTimeout(t));
       clearTimeout(correctAnswerTimer);
+      clearTimeout(completeTimer);
     };
-  }, [sortedAnswers.length]);
+  }, [question.id, totalAnswers, onComplete]);
 
   return (
     <div className="space-y-6">
@@ -175,12 +188,12 @@ export function AnswerResultsDisplay({
         })}
       </div>
 
-      {/* Correct answer - appears after delay with glow */}
+      {/* Correct answer - appears 3 seconds after last player answer */}
       <div className={cn(
         "flex justify-center transition-all duration-700",
         showCorrectAnswer 
           ? "opacity-100 translate-y-0 scale-100" 
-          : "opacity-0 translate-y-8 scale-90"
+          : "opacity-0 translate-y-8 scale-90 pointer-events-none h-0"
       )}>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Правильный ответ:</span>
