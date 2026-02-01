@@ -199,12 +199,12 @@ const Index = () => {
         // Mark that bot selection is in progress to prevent duplicate triggers
         botSelectionInProgressRef.current = true;
         
-        // Bot selects a random neutral territory after a short delay
-        const neutral = localGame.neutralTerritories;
-        if (neutral.length > 0) {
+        // Bot selects from ADJACENT neutral territories only (uses neighbor system)
+        const neighborTerritories = localGame.getNeighborSettlementTerritories();
+        if (neighborTerritories.length > 0) {
           const delay = 800 + Math.random() * 1200;
           const timeoutId = setTimeout(() => {
-            const targetId = neutral[Math.floor(Math.random() * neutral.length)].id;
+            const targetId = neighborTerritories[Math.floor(Math.random() * neighborTerritories.length)];
             localGame.selectSettlementTerritory(targetId);
             botSelectionInProgressRef.current = false;
           }, delay);
