@@ -39,6 +39,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
   });
 
   const [answers, setAnswers] = useState<Answer[]>([]);
+  const [displayedAnswers, setDisplayedAnswers] = useState<Answer[]>([]); // For UI display
+  const [isShowingResults, setIsShowingResults] = useState(false);
   const animationQueueRef = useRef<{ territoryId: string; playerId: string; isCapital: boolean }[]>([]);
 
   // Get unowned territories
@@ -180,19 +182,30 @@ export function useGameState(questionProviders?: QuestionProviders) {
   useEffect(() => {
     const { phase, currentQuestion, players } = gameState;
     
-    if (!currentQuestion || answers.length === 0) return;
+    if (!currentQuestion || answers.length === 0 || isShowingResults) return;
     
     const activePlayers = players.filter(p => !p.isEliminated);
     console.log('Checking answers:', answers.length, 'vs active players:', activePlayers.length);
     
+    // Update displayed answers for UI
+    setDisplayedAnswers([...answers]);
+    
     if (phase === 'settlement' && answers.length >= activePlayers.length) {
-      console.log('Processing settlement answers...');
-      processSettlementAnswers(answers, currentQuestion);
+      console.log('All answers collected, showing results...');
+      setIsShowingResults(true);
+      
+      // Show results for 3 seconds, then process
+      setTimeout(() => {
+        console.log('Processing settlement answers...');
+        processSettlementAnswers(answers, currentQuestion);
+        setIsShowingResults(false);
+        setDisplayedAnswers([]);
+      }, 3000);
     } else if ((phase === 'war' || phase === 'capital_battle') && answers.length >= 2) {
       console.log('Processing war answers...');
       processWarAnswers(answers, currentQuestion);
     }
-  }, [answers, gameState.phase, gameState.currentQuestion, gameState.players]);
+  }, [answers, gameState.phase, gameState.currentQuestion, gameState.players, isShowingResults]);
 
   // Process settlement phase answers
   const processSettlementAnswers = useCallback(async (submittedAnswers: Answer[], question: Question) => {
@@ -469,5 +482,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     resetGame,
     neutralTerritories,
     answers,
+    displayedAnswers,
+    isShowingResults,
   };
 }
