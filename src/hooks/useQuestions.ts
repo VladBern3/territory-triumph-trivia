@@ -3,81 +3,98 @@ import { supabase } from '@/integrations/supabase/client';
 import { Question } from '@/types/game';
 
 export function useQuestions() {
-  const [numericQuestions, setNumericQuestions] = useState<Question[]>([]);
-  const [choiceQuestions, setChoiceQuestions] = useState<Question[]>([]);
   const [usedQuestionIds, setUsedQuestionIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadedRef = useRef(false);
 
+  // Load is now a no-op since we fetch questions on demand via RPC
   const loadQuestions = useCallback(async () => {
     if (loadedRef.current) return;
-    
-    setIsLoading(true);
-    setError(null);
+    loadedRef.current = true;
+    setIsLoading(false);
+  }, []);
 
+  // Fetch a random numeric question via RPC (doesn't expose correct answer)
+  const getRandomNumericQuestion = useCallback(async (): Promise<Question | null> => {
     try {
-      const [numericResult, choiceResult] = await Promise.all([
-        supabase.from('numeric_questions').select('*'),
-        supabase.from('choice_questions').select('*'),
-      ]);
+      // Build RPC params - only include excluded_ids if there are any
+      const params = usedQuestionIds.length > 0 
+        ? { excluded_ids: usedQuestionIds }
+        : {};
+        
+      const { data, error } = await supabase.rpc('get_random_numeric_question', params);
 
-      if (numericResult.error) throw numericResult.error;
-      if (choiceResult.error) throw choiceResult.error;
+      if (error) {
+        console.error('Failed to get numeric question:', error);
+        return null;
+      }
 
-      const numericMapped: Question[] = (numericResult.data || []).map(q => ({
+      if (!data || data.length === 0) {
+        console.warn('No numeric questions available');
+        return null;
+      }
+
+      const q = data[0];
+      setUsedQuestionIds(prev => [...prev, q.id]);
+      
+      return {
         id: q.id,
         type: 'numeric' as const,
         text: q.text,
-        correctAnswer: q.correct_answer,
+        correctAnswer: 0, // Not exposed by RPC for anti-cheat
         category: q.category || undefined,
         difficulty: q.difficulty || undefined,
-      }));
+      };
+    } catch (err) {
+      console.error('Error fetching numeric question:', err);
+      return null;
+    }
+  }, [usedQuestionIds]);
 
-      const choiceMapped: Question[] = (choiceResult.data || []).map(q => ({
+  // Fetch a random choice question via RPC (doesn't expose correct answer)
+  const getRandomChoiceQuestion = useCallback(async (): Promise<Question | null> => {
+    try {
+      // Build RPC params - only include excluded_ids if there are any
+      const params = usedQuestionIds.length > 0 
+        ? { excluded_ids: usedQuestionIds }
+        : {};
+        
+      const { data, error } = await supabase.rpc('get_random_choice_question', params);
+
+      if (error) {
+        console.error('Failed to get choice question:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No choice questions available');
+        return null;
+      }
+
+      const q = data[0];
+      setUsedQuestionIds(prev => [...prev, q.id]);
+      
+      return {
         id: q.id,
         type: 'multiple_choice' as const,
         text: q.text,
-        correctAnswer: q.correct_answer,
+        correctAnswer: '', // Not exposed by RPC for anti-cheat
         options: Array.isArray(q.options) ? q.options as string[] : [],
         category: q.category || undefined,
         difficulty: q.difficulty || undefined,
-      }));
-
-      setNumericQuestions(numericMapped);
-      setChoiceQuestions(choiceMapped);
-      loadedRef.current = true;
+      };
     } catch (err) {
-      console.error('Failed to load questions:', err);
-      setError('Не удалось загрузить вопросы');
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching choice question:', err);
+      return null;
     }
-  }, []);
-
-  const getRandomNumericQuestion = useCallback((): Question | null => {
-    const available = numericQuestions.filter(q => !usedQuestionIds.includes(q.id));
-    if (available.length === 0) return null;
-    const question = available[Math.floor(Math.random() * available.length)];
-    setUsedQuestionIds(prev => [...prev, question.id]);
-    return question;
-  }, [numericQuestions, usedQuestionIds]);
-
-  const getRandomChoiceQuestion = useCallback((): Question | null => {
-    const available = choiceQuestions.filter(q => !usedQuestionIds.includes(q.id));
-    if (available.length === 0) return null;
-    const question = available[Math.floor(Math.random() * available.length)];
-    setUsedQuestionIds(prev => [...prev, question.id]);
-    return question;
-  }, [choiceQuestions, usedQuestionIds]);
+  }, [usedQuestionIds]);
 
   const resetUsedQuestions = useCallback(() => {
     setUsedQuestionIds([]);
   }, []);
 
   return {
-    numericQuestions,
-    choiceQuestions,
     isLoading,
     error,
     loadQuestions,
