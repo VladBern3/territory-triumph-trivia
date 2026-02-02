@@ -66,11 +66,11 @@ export function MultiplayerLobby({
   };
 
   const handleCreateSession = async () => {
-    if (!playerName.trim()) return;
+    if (!playerName.trim() || !user) return;
     setIsLoading(true);
     
     const player = {
-      id: `player_${Date.now()}`,
+      id: user.id, // Use auth.uid() for RLS compatibility
       name: playerName.trim(),
       color: getNextAvailableColor(),
     };
@@ -81,11 +81,11 @@ export function MultiplayerLobby({
   };
 
   const handleJoinSession = async () => {
-    if (!playerName.trim() || !joinCode.trim()) return;
+    if (!playerName.trim() || !joinCode.trim() || !user) return;
     setIsLoading(true);
     
     const player = {
-      id: `player_${Date.now()}`,
+      id: user.id, // Use auth.uid() for RLS compatibility
       name: playerName.trim(),
       color: getNextAvailableColor(),
     };
@@ -167,15 +167,27 @@ export function MultiplayerLobby({
               </ul>
             </div>
 
-            <Button
-              variant="royal"
-              size="xl"
-              onClick={() => setMode('create')}
-              className="w-full"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Создать игру
-            </Button>
+            {user ? (
+              <Button
+                variant="royal"
+                size="xl"
+                onClick={() => setMode('create')}
+                className="w-full"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Создать игру
+              </Button>
+            ) : (
+              <Button
+                variant="royal"
+                size="xl"
+                onClick={() => navigate('/auth')}
+                className="w-full"
+              >
+                <LogIn className="w-5 h-5 mr-2" />
+                Войти чтобы создать игру
+              </Button>
+            )}
 
             <Button
               variant="outline"
@@ -187,15 +199,27 @@ export function MultiplayerLobby({
               Одиночная игра
             </Button>
             
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => setMode('join')}
-              className="w-full"
-            >
-              <UserPlus className="w-5 h-5 mr-2" />
-              Присоединиться
-            </Button>
+            {user ? (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setMode('join')}
+                className="w-full"
+              >
+                <UserPlus className="w-5 h-5 mr-2" />
+                Присоединиться
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => navigate('/auth')}
+                className="w-full"
+              >
+                <LogIn className="w-5 h-5 mr-2" />
+                Войти чтобы присоединиться
+              </Button>
+            )}
 
             <Button
               variant="ghost"
