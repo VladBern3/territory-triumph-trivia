@@ -186,7 +186,7 @@ export function useMultiplayer() {
       .from('game_sessions')
       .select('*')
       .eq('code', code.toUpperCase())
-      .single();
+      .maybeSingle();
 
     if (fetchError || !session) {
       setError('Сессия не найдена');
@@ -234,7 +234,7 @@ export function useMultiplayer() {
       .update({ players: updatedPlayers as unknown as Json })
       .eq('id', session.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (updateError) {
       setError('Не удалось присоединиться: ' + updateError.message);
