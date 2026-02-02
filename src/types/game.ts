@@ -34,6 +34,8 @@ export interface Question {
   correctAnswer: number | string;
   options?: string[]; // For multiple choice
   hint?: string;
+  category?: string;
+  difficulty?: number;
 }
 
 export interface SettlementSelection {

@@ -7,8 +7,8 @@ const CAPITAL_POINTS = 1000;
 const TERRITORY_POINTS = 200;
 
 interface QuestionProviders {
-  getRandomNumericQuestion: () => Question | null;
-  getRandomChoiceQuestion: () => Question | null;
+  getRandomNumericQuestion: () => Promise<Question | null>;
+  getRandomChoiceQuestion: () => Promise<Question | null>;
 }
 
 export function useGameState(questionProviders?: QuestionProviders) {
@@ -16,12 +16,12 @@ export function useGameState(questionProviders?: QuestionProviders) {
   const questionProvidersRef = useRef(questionProviders);
   questionProvidersRef.current = questionProviders;
   
-  const getNumericQuestion = useCallback(() => {
-    return questionProvidersRef.current?.getRandomNumericQuestion() || null;
+  const getNumericQuestion = useCallback(async (): Promise<Question | null> => {
+    return await questionProvidersRef.current?.getRandomNumericQuestion() || null;
   }, []);
   
-  const getChoiceQuestion = useCallback(() => {
-    return questionProvidersRef.current?.getRandomChoiceQuestion() || null;
+  const getChoiceQuestion = useCallback(async (): Promise<Question | null> => {
+    return await questionProvidersRef.current?.getRandomChoiceQuestion() || null;
   }, []);
   const [gameState, setGameState] = useState<GameState>({
     phase: 'lobby',
@@ -129,7 +129,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     }
 
     // After all initial animations, start the settlement phase
-    const firstQuestion = getNumericQuestion();
+    const firstQuestion = await getNumericQuestion();
     
     setGameState(prev => ({
       ...prev,
@@ -401,7 +401,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
     });
   }, []);
 
-  const processWarAnswers = (submittedAnswers: Answer[], question: Question) => {
+  const processWarAnswers = async (submittedAnswers: Answer[], question: Question) => {
     const correctAnswer = question.correctAnswer;
     const { attackingPlayerId, defendingPlayerId, targetTerritoryId, phase } = gameState;
     
@@ -425,11 +425,11 @@ export function useGameState(questionProviders?: QuestionProviders) {
       attackerWins = attackerAnswer.timestamp < defenderAnswer.timestamp - 500;
     }
     
-    setGameState(prev => {
-      if (!attackerWins) {
-        // Attack failed - next player's turn, no question until they select target
-        setAnswers([]);
-        
+    if (!attackerWins) {
+      // Attack failed - next player's turn, no question until they select target
+      setAnswers([]);
+      
+      setGameState(prev => {
         const activePlayers = prev.players.filter(p => !p.isEliminated);
         const currentIndex = activePlayers.findIndex(p => p.id === prev.currentTurnPlayerId);
         const nextPlayer = activePlayers[(currentIndex + 1) % activePlayers.length];
@@ -443,24 +443,30 @@ export function useGameState(questionProviders?: QuestionProviders) {
           targetTerritoryId: null,
           capitalBattleRound: 0,
         };
-      }
+      });
+      return;
+    }
+    
+    // Attack succeeded - check if capital battle continues
+    const currentState = gameStateRef.current;
+    const targetTerritory = currentState.territories.find(t => t.id === targetTerritoryId)!;
+    const isCapitalBattle = targetTerritory.isCapital;
+    
+    if (isCapitalBattle && phase === 'capital_battle' && currentState.capitalBattleRound < 3) {
+      // Get next question for capital battle
+      const nextQuestion = await getChoiceQuestion();
+      setAnswers([]);
       
-      // Attack succeeded - animate capture
-      const targetTerritory = prev.territories.find(t => t.id === targetTerritoryId)!;
-      const isCapitalBattle = targetTerritory.isCapital;
-      
-      if (isCapitalBattle && phase === 'capital_battle' && prev.capitalBattleRound < 3) {
-        const nextQuestion = getChoiceQuestion();
-        setAnswers([]);
-        
-        return {
-          ...prev,
-          currentQuestion: nextQuestion,
-          capitalBattleRound: prev.capitalBattleRound + 1,
-        };
-      }
-      
-      // Transfer territory
+      setGameState(prev => ({
+        ...prev,
+        currentQuestion: nextQuestion,
+        capitalBattleRound: prev.capitalBattleRound + 1,
+      }));
+      return;
+    }
+    
+    // Transfer territory
+    setGameState(prev => {
       const newTerritories = [...prev.territories];
       const newPlayers = [...prev.players];
       const territory = newTerritories.find(t => t.id === targetTerritoryId)!;
@@ -497,8 +503,6 @@ export function useGameState(questionProviders?: QuestionProviders) {
         };
       }
       
-      setAnswers([]);
-      
       const currentIndex = activePlayers.findIndex(p => p.id === prev.currentTurnPlayerId);
       const nextPlayer = activePlayers[(currentIndex + 1) % activePlayers.length];
       
@@ -515,6 +519,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
         capitalBattleRound: 0,
       };
     });
+    
+    setAnswers([]);
   };
 
   // Select territory during settlement phase
@@ -621,16 +627,19 @@ export function useGameState(questionProviders?: QuestionProviders) {
       
       // Get next question BEFORE setGameState - only for settlement phase
       // Also track the question ID to prevent duplicates
-      let nextQuestion = newPhase === 'war' ? null : getNumericQuestion();
-      
-      // If we somehow got the same question as last time, try to get a new one
-      if (nextQuestion && nextQuestion.id === lastGeneratedQuestionIdRef.current) {
-        console.log('Duplicate question detected, getting new one');
-        nextQuestion = getNumericQuestion();
-      }
-      
-      if (nextQuestion) {
-        lastGeneratedQuestionIdRef.current = nextQuestion.id;
+      let nextQuestion: Question | null = null;
+      if (newPhase !== 'war') {
+        nextQuestion = await getNumericQuestion();
+        
+        // If we somehow got the same question as last time, try to get a new one
+        if (nextQuestion && nextQuestion.id === lastGeneratedQuestionIdRef.current) {
+          console.log('Duplicate question detected, getting new one');
+          nextQuestion = await getNumericQuestion();
+        }
+        
+        if (nextQuestion) {
+          lastGeneratedQuestionIdRef.current = nextQuestion.id;
+        }
       }
       
       const activePlayers = gameState.players.filter(p => !p.isEliminated);
@@ -652,7 +661,7 @@ export function useGameState(questionProviders?: QuestionProviders) {
   }, [gameState.territories, gameState.settlementSelections, gameState.currentTurnPlayerId, gameState.roundNumber, gameState.players, animateCapture, getNumericQuestion]);
 
   // Select target for attack
-  const selectAttackTarget = useCallback((territoryId: string) => {
+  const selectAttackTarget = useCallback(async (territoryId: string) => {
     const territory = gameState.territories.find(t => t.id === territoryId);
     if (!territory || !territory.ownerId || territory.ownerId === gameState.currentTurnPlayerId) {
       return;
@@ -660,8 +669,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
     
     const isCapital = territory.isCapital;
     
-    // Get question for the battle
-    const battleQuestion = getChoiceQuestion();
+    // Get question for the battle BEFORE updating state
+    const battleQuestion = await getChoiceQuestion();
     
     setGameState(prev => ({
       ...prev,
