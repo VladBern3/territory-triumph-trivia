@@ -1,7 +1,8 @@
 import { Answer, Player, Question } from '@/types/game';
 import { cn } from '@/lib/utils';
-import { Clock } from 'lucide-react';
+import { Clock, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AnswerResultsDisplayProps {
   answers: Answer[];
@@ -9,6 +10,7 @@ interface AnswerResultsDisplayProps {
   question: Question;
   questionStartTime: number;
   onComplete?: () => void; // Called when results display is done
+  correctAnswer?: number | string | null; // Pre-fetched correct answer (optional)
 }
 
 const playerGradientClasses: Record<string, string> = {
@@ -31,10 +33,17 @@ export function AnswerResultsDisplay({
   question,
   questionStartTime,
   onComplete,
+  correctAnswer: externalCorrectAnswer,
 }: AnswerResultsDisplayProps) {
   const [visibleCount, setVisibleCount] = useState(0);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
+  const [fetchedCorrectAnswer, setFetchedCorrectAnswer] = useState<number | string | null>(null);
+  const [isLoadingAnswer, setIsLoadingAnswer] = useState(false);
   const hasCalledComplete = useRef(false);
+  const hasFetchedAnswer = useRef(false);
+
+  // Use external correct answer if provided, otherwise use fetched one
+  const correctAnswer = externalCorrectAnswer ?? fetchedCorrectAnswer ?? question.correctAnswer;
 
   // Get all active players and their answers
   const activePlayers = players.filter(p => !p.isEliminated);
@@ -50,19 +59,20 @@ export function AnswerResultsDisplay({
   });
   
   // Sort answers by ranking (closest to correct, then by time)
+  // Note: Sorting happens AFTER we have the correct answer, but we show cards in order
   const sortedAnswers = [...playerAnswers].sort((a, b) => {
     if (a.answer === null && b.answer !== null) return 1;
     if (a.answer !== null && b.answer === null) return -1;
     if (a.answer === null && b.answer === null) return 0;
     
     if (question.type === 'numeric') {
-      const correctAnswer = Number(question.correctAnswer);
-      const distA = Math.abs(Number(a.answer) - correctAnswer);
-      const distB = Math.abs(Number(b.answer) - correctAnswer);
+      const correctNum = Number(correctAnswer);
+      const distA = Math.abs(Number(a.answer) - correctNum);
+      const distB = Math.abs(Number(b.answer) - correctNum);
       if (distA !== distB) return distA - distB;
     } else {
-      const aCorrect = a.answer === question.correctAnswer;
-      const bCorrect = b.answer === question.correctAnswer;
+      const aCorrect = a.answer === correctAnswer;
+      const bCorrect = b.answer === correctAnswer;
       if (aCorrect !== bCorrect) return aCorrect ? -1 : 1;
     }
     return a.timestamp - b.timestamp;
@@ -72,6 +82,53 @@ export function AnswerResultsDisplay({
   const winnerId = sortedAnswers.find(e => e.answer !== null)?.player.id;
   
   const totalAnswers = sortedAnswers.length;
+
+  // Fetch correct answer from server when component mounts
+  useEffect(() => {
+    if (hasFetchedAnswer.current || externalCorrectAnswer !== undefined) return;
+    hasFetchedAnswer.current = true;
+    
+    const fetchCorrectAnswer = async () => {
+      setIsLoadingAnswer(true);
+      try {
+        if (question.type === 'numeric') {
+          // Use any answer to get the correct value (difference doesn't matter, we just need correct_answer)
+          const { data, error } = await supabase.rpc('check_numeric_answer', {
+            question_id: question.id,
+            user_answer: 0, // We just need to get the correct_answer back
+          });
+          
+          if (!error && data && data.length > 0) {
+            setFetchedCorrectAnswer(data[0].correct_answer);
+          }
+        } else {
+          // For choice questions, check each option to find the correct one
+          // Or we could add a separate RPC to get the correct answer directly
+          // For now, just use question.correctAnswer (it might be empty string)
+          // The check_choice_answer RPC returns boolean, not the answer itself
+          // So we need to iterate through options
+          if (question.options) {
+            for (const option of question.options) {
+              const { data, error } = await supabase.rpc('check_choice_answer', {
+                question_id: question.id,
+                user_answer: option,
+              });
+              if (!error && data === true) {
+                setFetchedCorrectAnswer(option);
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching correct answer:', err);
+      } finally {
+        setIsLoadingAnswer(false);
+      }
+    };
+    
+    fetchCorrectAnswer();
+  }, [question.id, question.type, question.options, externalCorrectAnswer]);
 
   // Sequential reveal animation
   useEffect(() => {
@@ -109,6 +166,7 @@ export function AnswerResultsDisplay({
     };
   }, [question.id, totalAnswers, onComplete]);
 
+
   return (
     <div className="space-y-6">
       {/* Question text */}
@@ -129,8 +187,8 @@ export function AnswerResultsDisplay({
           const isNoAnswer = answer === null;
           const isWinner = player.id === winnerId;
           const isCorrect = !isNoAnswer && (question.type === 'numeric'
-            ? Number(answer) === Number(question.correctAnswer)
-            : answer === question.correctAnswer);
+            ? Number(answer) === Number(correctAnswer)
+            : answer === correctAnswer);
           
           return (
             <div
@@ -198,11 +256,20 @@ export function AnswerResultsDisplay({
               ? "opacity-100 translate-y-0 scale-100" 
               : "opacity-0 translate-y-4 scale-90"
           )}>
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-green-500/50 blur-lg rounded-lg animate-pulse" />
-            <div className="relative bg-gradient-to-br from-green-600 to-green-700 text-white px-4 py-2 rounded-lg font-display text-xl font-bold shadow-lg border border-green-400/50">
-              {question.correctAnswer}
-            </div>
+            {isLoadingAnswer ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Загрузка...</span>
+              </div>
+            ) : (
+              <>
+                {/* Glow effect */}
+                <div className="absolute inset-0 bg-green-500/50 blur-lg rounded-lg animate-pulse" />
+                <div className="relative bg-gradient-to-br from-green-600 to-green-700 text-white px-4 py-2 rounded-lg font-display text-xl font-bold shadow-lg border border-green-400/50">
+                  {correctAnswer}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

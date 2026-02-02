@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { GameState, Player, Territory, Answer, Question, TerritoryAnimation } from '@/types/game';
 import { initialTerritories } from '@/data/territories';
+import { supabase } from '@/integrations/supabase/client';
 
 const ANIMATION_DURATION = 2000; // ms for capture animation (2 seconds)
 const CAPITAL_POINTS = 1000;
@@ -300,6 +301,34 @@ export function useGameState(questionProviders?: QuestionProviders) {
     };
   }, [gameState.currentQuestion?.id, isShowingResults, startQuestionTimer]);
 
+  // Helper to fetch correct answer from server
+  const fetchCorrectAnswer = useCallback(async (question: Question): Promise<number | string | null> => {
+    try {
+      if (question.type === 'numeric') {
+        const { data, error } = await supabase.rpc('check_numeric_answer', {
+          question_id: question.id,
+          user_answer: 0,
+        });
+        if (!error && data && data.length > 0) {
+          return data[0].correct_answer;
+        }
+      } else if (question.options) {
+        for (const option of question.options) {
+          const { data, error } = await supabase.rpc('check_choice_answer', {
+            question_id: question.id,
+            user_answer: option,
+          });
+          if (!error && data === true) {
+            return option;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching correct answer:', err);
+    }
+    return null;
+  }, []);
+
   // Effect to process answers when all players have responded
   useEffect(() => {
     const { phase, currentQuestion, players } = gameState;
@@ -325,9 +354,14 @@ export function useGameState(questionProviders?: QuestionProviders) {
       const totalAnswers = activePlayers.length;
       const resultsDisplayTime = (totalAnswers * 1000) + 1000 + 3000;
       
-      setTimeout(() => {
+      // Capture current state for async processing
+      const answersSnapshot = [...answers];
+      const questionSnapshot = currentQuestion;
+      
+      setTimeout(async () => {
         console.log('Processing settlement answers...');
-        processSettlementAnswers([...answers], currentQuestion);
+        const correctAnswer = await fetchCorrectAnswer(questionSnapshot);
+        processSettlementAnswers(answersSnapshot, questionSnapshot, correctAnswer);
       }, resultsDisplayTime);
     } else if ((phase === 'war' || phase === 'capital_battle') && answers.length >= 2) {
       console.log('All war answers collected, showing results...');
@@ -341,17 +375,22 @@ export function useGameState(questionProviders?: QuestionProviders) {
       // War phase: 2 players, so 2 seconds + 1 second + 3 seconds = 6 seconds
       const resultsDisplayTime = (2 * 1000) + 1000 + 3000;
       
-      setTimeout(() => {
+      // Capture current state for async processing
+      const answersSnapshot = [...answers];
+      const questionSnapshot = currentQuestion;
+      
+      setTimeout(async () => {
         console.log('Processing war answers...');
         setIsShowingResults(false);
-        processWarAnswers([...answers], currentQuestion);
+        const correctAnswer = await fetchCorrectAnswer(questionSnapshot);
+        processWarAnswers(answersSnapshot, questionSnapshot, correctAnswer);
       }, resultsDisplayTime);
     }
-  }, [answers, gameState.phase, gameState.currentQuestion, gameState.players, isShowingResults]);
+  }, [answers, gameState.phase, gameState.currentQuestion, gameState.players, isShowingResults, fetchCorrectAnswer]);
 
   // Process settlement phase answers - prepare for territory selection
-  const processSettlementAnswers = useCallback((submittedAnswers: Answer[], question: Question) => {
-    const correctAnswer = Number(question.correctAnswer);
+  const processSettlementAnswers = useCallback((submittedAnswers: Answer[], question: Question, fetchedCorrectAnswer: number | string | null) => {
+    const correctAnswer = fetchedCorrectAnswer !== null ? Number(fetchedCorrectAnswer) : 0;
     console.log('Correct answer:', correctAnswer);
     
     // Sort by distance to correct answer, then by timestamp (closer = better)
@@ -401,8 +440,8 @@ export function useGameState(questionProviders?: QuestionProviders) {
     });
   }, []);
 
-  const processWarAnswers = async (submittedAnswers: Answer[], question: Question) => {
-    const correctAnswer = question.correctAnswer;
+  const processWarAnswers = async (submittedAnswers: Answer[], question: Question, fetchedCorrectAnswer: number | string | null) => {
+    const correctAnswer = fetchedCorrectAnswer !== null ? fetchedCorrectAnswer : question.correctAnswer;
     const { attackingPlayerId, defendingPlayerId, targetTerritoryId, phase } = gameState;
     
     const attackerAnswer = submittedAnswers.find(a => a.playerId === attackingPlayerId);

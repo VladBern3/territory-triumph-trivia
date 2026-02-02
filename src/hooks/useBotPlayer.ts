@@ -38,36 +38,39 @@ export function useBotPlayer() {
   const timeoutIdsRef = useRef<NodeJS.Timeout[]>([]);
 
   // Generate a bot answer for a numeric question
+  // Since we don't have the correct answer (anti-cheat), bots generate plausible random answers
   const generateNumericAnswer = useCallback((
-    correctAnswer: number,
     difficulty: BotDifficulty
   ): number => {
     const config = BOT_CONFIGS[difficulty];
-    const accuracy = config.accuracyRange.min + 
-      Math.random() * (config.accuracyRange.max - config.accuracyRange.min);
     
-    // Generate answer within accuracy range of correct answer
-    const deviation = correctAnswer * accuracy * (Math.random() > 0.5 ? 1 : -1);
-    const answer = Math.round(correctAnswer + deviation);
+    // Generate a plausible random answer based on difficulty
+    // Harder bots generate answers in more "reasonable" ranges for trivia
+    const baseRanges = {
+      easy: { min: 1, max: 10000 },
+      medium: { min: 10, max: 5000 },
+      hard: { min: 50, max: 2000 },
+    };
     
-    return Math.max(0, answer); // Ensure non-negative
+    const range = baseRanges[difficulty];
+    const answer = Math.floor(range.min + Math.random() * (range.max - range.min));
+    
+    return answer;
   }, []);
 
   // Generate a bot answer for multiple choice
+  // Since we don't have the correct answer, bot randomly picks from available options
   const generateMultipleChoiceAnswer = useCallback((
     question: Question,
     difficulty: BotDifficulty
   ): string => {
-    const config = BOT_CONFIGS[difficulty];
-    const isCorrect = Math.random() < config.correctChance;
-    
-    if (isCorrect || !question.options) {
-      return String(question.correctAnswer);
+    if (!question.options || question.options.length === 0) {
+      return '';
     }
     
-    // Pick a random wrong answer
-    const wrongOptions = question.options.filter(opt => opt !== question.correctAnswer);
-    return wrongOptions[Math.floor(Math.random() * wrongOptions.length)] || String(question.correctAnswer);
+    // All bots just pick a random option (we don't know which is correct)
+    const randomIndex = Math.floor(Math.random() * question.options.length);
+    return question.options[randomIndex];
   }, []);
 
   // Get response time for a bot
@@ -101,7 +104,7 @@ export function useBotPlayer() {
         let answer: number | string;
         
         if (question.type === 'numeric') {
-          answer = generateNumericAnswer(Number(question.correctAnswer), difficulty);
+          answer = generateNumericAnswer(difficulty);
         } else {
           answer = generateMultipleChoiceAnswer(question, difficulty);
         }
