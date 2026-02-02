@@ -172,6 +172,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_choice_answer: {
+        Args: { question_id: string; user_answer: string }
+        Returns: boolean
+      }
+      check_numeric_answer: {
+        Args: { question_id: string; user_answer: number }
+        Returns: {
+          correct_answer: number
+          difference: number
+          is_correct: boolean
+        }[]
+      }
+      get_random_choice_question: {
+        Args: { excluded_ids?: string[] }
+        Returns: {
+          category: string
+          difficulty: number
+          id: string
+          options: Json
+          text: string
+        }[]
+      }
+      get_random_numeric_question: {
+        Args: { excluded_ids?: string[] }
+        Returns: {
+          category: string
+          difficulty: number
+          id: string
+          text: string
+        }[]
+      }
       is_game_host: { Args: { session_id: string }; Returns: boolean }
       is_game_participant: { Args: { session_id: string }; Returns: boolean }
     }
