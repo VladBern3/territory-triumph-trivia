@@ -4,7 +4,8 @@ import { Player } from '@/types/game';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Crown, Users, Swords, Castle, Copy, Check, Loader2, ArrowLeft, UserPlus, Plus, Bot, Map } from 'lucide-react';
+import { Crown, Users, Swords, Castle, Copy, Check, Loader2, ArrowLeft, UserPlus, Plus, Bot, Map, LogIn } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 interface MultiplayerLobbyProps {
   sessionCode: string | null;
@@ -52,8 +53,9 @@ export function MultiplayerLobby({
   onStartSinglePlayer,
 }: MultiplayerLobbyProps) {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [mode, setMode] = useState<'menu' | 'create' | 'join' | 'waiting' | 'singleplayer'>('menu');
-  const [playerName, setPlayerName] = useState('');
+  const [playerName, setPlayerName] = useState(user?.user_metadata?.full_name || '');
   const [joinCode, setJoinCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -130,6 +132,29 @@ export function MultiplayerLobby({
           </CardHeader>
           
           <CardContent className="space-y-4">
+            {/* Auth Status */}
+            {user ? (
+              <div className="bg-secondary/50 rounded-lg p-3 flex items-center justify-between">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Вы вошли как </span>
+                  <span className="font-medium">{user.user_metadata?.full_name || user.email}</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                  Выйти
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/auth')}
+                className="w-full"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Войти в аккаунт
+              </Button>
+            )}
+
             <div className="bg-secondary/50 rounded-lg p-4 space-y-2 text-sm">
               <h3 className="font-display font-semibold flex items-center gap-2">
                 <Castle className="w-4 h-4" />
