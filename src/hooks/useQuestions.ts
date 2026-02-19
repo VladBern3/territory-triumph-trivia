@@ -18,15 +18,13 @@ export function useQuestions() {
   // Fetch a random numeric question via RPC (doesn't expose correct answer)
   const getRandomNumericQuestion = useCallback(async (): Promise<Question | null> => {
     try {
-      // Build RPC params - only include excluded_ids if there are any
-      const params = usedQuestionIds.length > 0 
-        ? { excluded_ids: usedQuestionIds }
-        : {};
-        
-      const { data, error } = await supabase.rpc('get_random_numeric_question', params);
+      console.log('[useQuestions] Fetching numeric question, excluded:', usedQuestionIds.length);
+      const { data, error } = await supabase.rpc('get_random_numeric_question', {
+        excluded_ids: usedQuestionIds,
+      });
 
       if (error) {
-        console.error('Failed to get numeric question:', error);
+        console.error('[useQuestions] Failed to get numeric question:', error);
         return null;
       }
 
@@ -55,15 +53,13 @@ export function useQuestions() {
   // Fetch a random choice question via RPC (doesn't expose correct answer)
   const getRandomChoiceQuestion = useCallback(async (): Promise<Question | null> => {
     try {
-      // Build RPC params - only include excluded_ids if there are any
-      const params = usedQuestionIds.length > 0 
-        ? { excluded_ids: usedQuestionIds }
-        : {};
-        
-      const { data, error } = await supabase.rpc('get_random_choice_question', params);
+      console.log('[useQuestions] Fetching choice question, excluded:', usedQuestionIds.length);
+      const { data, error } = await supabase.rpc('get_random_choice_question', {
+        excluded_ids: usedQuestionIds,
+      });
 
       if (error) {
-        console.error('Failed to get choice question:', error);
+        console.error('[useQuestions] Failed to get choice question:', error);
         return null;
       }
 
