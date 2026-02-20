@@ -179,6 +179,7 @@ export function GameBoard({
           duration={15}
           remainingSelections={currentSelector?.territoriesRemaining ?? 1}
           onTimeout={onSelectionTimeout}
+          isPaused={isPaused}
         />
       )}
 

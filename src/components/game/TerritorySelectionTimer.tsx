@@ -10,6 +10,7 @@ interface TerritorySelectionTimerProps {
   duration?: number;
   remainingSelections?: number; // Track how many selections left to reset timer
   onTimeout: () => void;
+  isPaused?: boolean;
 }
 
 const PLAYER_COLORS = {
@@ -34,6 +35,7 @@ export function TerritorySelectionTimer({
   duration = 15,
   remainingSelections = 1,
   onTimeout,
+  isPaused = false,
 }: TerritorySelectionTimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [hasTriggeredTimeout, setHasTriggeredTimeout] = useState(false);
@@ -46,9 +48,9 @@ export function TerritorySelectionTimer({
     }
   }, [isActive, playerId, remainingSelections, duration]);
 
-  // Countdown timer
+  // Countdown timer - stops when paused
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isPaused) return;
 
     const interval = setInterval(() => {
       setTimeLeft(prev => {
@@ -61,15 +63,15 @@ export function TerritorySelectionTimer({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isActive, isPaused]);
 
-  // Trigger timeout callback when timer reaches 0 (only once)
+  // Trigger timeout callback when timer reaches 0 (only once, not while paused)
   useEffect(() => {
-    if (timeLeft === 0 && isActive && !hasTriggeredTimeout) {
+    if (timeLeft === 0 && isActive && !hasTriggeredTimeout && !isPaused) {
       setHasTriggeredTimeout(true);
       onTimeout();
     }
-  }, [timeLeft, isActive, hasTriggeredTimeout, onTimeout]);
+  }, [timeLeft, isActive, hasTriggeredTimeout, isPaused, onTimeout]);
 
   if (!isActive) return null;
 
