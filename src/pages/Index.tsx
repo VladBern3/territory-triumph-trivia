@@ -20,6 +20,8 @@ const Index = () => {
   const botPlayer = useBotPlayer();
   const gameSounds = useGameSounds();
   const [isSinglePlayer, setIsSinglePlayer] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const humanPlayerIdRef = useRef<string | null>(null);
   const lastAnimationIdRef = useRef<string | null>(null);
   
@@ -145,7 +147,7 @@ const Index = () => {
 
   // Schedule bot answers when in single player mode and question changes
   useEffect(() => {
-    if (!isSinglePlayer) return;
+    if (!isSinglePlayer || isPaused) return;
     
     const { currentQuestion, phase: currentPhase, attackingPlayerId, defendingPlayerId, players } = localGame.gameState;
     if (!currentQuestion) return;
@@ -179,11 +181,11 @@ const Index = () => {
     return () => {
       botPlayer.cancelPendingAnswers();
     };
-  }, [isSinglePlayer, localGame.gameState.currentQuestion?.id, localGame.gameState.phase, botPlayer, localGame]);
+  }, [isSinglePlayer, isPaused, localGame.gameState.currentQuestion?.id, localGame.gameState.phase, botPlayer, localGame]);
 
   // Auto-select attack target for bot's turn in war phase
   useEffect(() => {
-    if (!isSinglePlayer) return;
+    if (!isSinglePlayer || isPaused) return;
     
     const { phase: currentPhase, currentTurnPlayerId, attackingPlayerId } = localGame.gameState;
     
@@ -204,13 +206,13 @@ const Index = () => {
         }
       }
     }
-  }, [isSinglePlayer, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.attackingPlayerId, localGame]);
+  }, [isSinglePlayer, isPaused, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.attackingPlayerId, localGame]);
 
   // Auto-select settlement territory for bot's turn
   const botSelectionInProgressRef = useRef(false);
   
   useEffect(() => {
-    if (!isSinglePlayer) return;
+    if (!isSinglePlayer || isPaused) return;
     
     const { phase: currentPhase, currentTurnPlayerId, isSelectingSettlementTerritory } = localGame.gameState;
     
@@ -243,7 +245,7 @@ const Index = () => {
         }
       }
     }
-  }, [isSinglePlayer, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.isSelectingSettlementTerritory, localGame]);
+  }, [isSinglePlayer, isPaused, localGame.gameState.phase, localGame.gameState.currentTurnPlayerId, localGame.gameState.isSelectingSettlementTerritory, localGame]);
 
   // Handle answer submission
   const handleSubmitAnswer = useCallback((answer: Answer) => {
@@ -320,11 +322,33 @@ const Index = () => {
       leaveSession();
     }
     setIsSinglePlayer(false);
+    setIsPaused(false);
     humanPlayerIdRef.current = null;
     botPlayer.cancelPendingAnswers();
     questions.resetUsedQuestions();
     localGame.resetGame();
   }, [isInSession, leaveSession, localGame, botPlayer, questions]);
+
+  // Handle pause toggle (single player only)
+  const handleTogglePause = useCallback(() => {
+    setIsPaused(prev => {
+      const next = !prev;
+      if (next) {
+        // Pause: cancel pending bot answers
+        botPlayer.cancelPendingAnswers();
+      }
+      return next;
+    });
+  }, [botPlayer]);
+
+  // Handle mute toggle
+  const handleToggleMute = useCallback(() => {
+    setIsMuted(prev => {
+      const next = !prev;
+      gameSounds.setMuted(next);
+      return next;
+    });
+  }, [gameSounds]);
 
   // Waiting room / Lobby - check if not in active game or multiplayer waiting
   const isWaitingPhase = phase === 'lobby' || (mpGameState.phase as string) === 'waiting';
@@ -397,6 +421,11 @@ const Index = () => {
         questionStartTime={localGame.questionStartTime}
         localPlayerId={humanPlayerId}
         onSelectionTimeout={handleSelectionTimeout}
+        isSinglePlayer={isSinglePlayer}
+        isMuted={isMuted}
+        onToggleMute={handleToggleMute}
+        isPaused={isPaused}
+        onTogglePause={isSinglePlayer ? handleTogglePause : undefined}
       />
       {debugPanel}
     </>

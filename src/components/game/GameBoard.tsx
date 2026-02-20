@@ -4,6 +4,7 @@ import { PlayerPanel } from './PlayerPanel';
 import { QuestionModal } from './QuestionModal';
 import { BattleInfo } from './BattleInfo';
 import { TerritorySelectionTimer } from './TerritorySelectionTimer';
+import { GameControls } from './GameControls';
 import { Loader2, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,11 @@ interface GameBoardProps {
   questionStartTime?: number;
   localPlayerId?: string | null;
   onSelectionTimeout?: () => void;
+  isSinglePlayer?: boolean;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
+  isPaused?: boolean;
+  onTogglePause?: () => void;
 }
 
 export function GameBoard({
@@ -35,6 +41,11 @@ export function GameBoard({
   questionStartTime = Date.now(),
   localPlayerId,
   onSelectionTimeout,
+  isSinglePlayer = false,
+  isMuted = false,
+  onToggleMute,
+  isPaused = false,
+  onTogglePause,
 }: GameBoardProps) {
   const {
     phase,
@@ -106,7 +117,7 @@ export function GameBoard({
       </div>
 
       {/* Phase indicator */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-28 z-10">
         <div className="bg-card/90 backdrop-blur-sm px-4 py-2 rounded-lg medieval-border">
           <p className="text-sm text-muted-foreground">
             {phase === 'initializing' && 'Распределение территорий...'}
@@ -117,6 +128,16 @@ export function GameBoard({
           </p>
         </div>
       </div>
+
+      {/* Game Controls - sound toggle + pause (single player only) */}
+      <GameControls
+        isSinglePlayer={isSinglePlayer}
+        showQuestionModal={!!showQuestionModal}
+        isMuted={isMuted}
+        onToggleMute={onToggleMute || (() => {})}
+        isPaused={isPaused}
+        onTogglePause={onTogglePause}
+      />
 
       {/* Initializing overlay */}
       {isInitializing && currentAnimation && (
