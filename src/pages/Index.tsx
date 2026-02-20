@@ -22,6 +22,7 @@ const Index = () => {
   const [isSinglePlayer, setIsSinglePlayer] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const isPausedRef = useRef(false); // Ref for sync access inside setTimeout callbacks
   const humanPlayerIdRef = useRef<string | null>(null);
   const lastAnimationIdRef = useRef<string | null>(null);
   
@@ -199,6 +200,7 @@ const Index = () => {
         if (attackable.length > 0) {
           const delay = 1000 + Math.random() * 1500;
           const timeoutId = setTimeout(() => {
+            if (isPausedRef.current) return; // guard against stale closure
             const targetId = attackable[Math.floor(Math.random() * attackable.length)];
             localGame.selectAttackTarget(targetId);
           }, delay);
@@ -234,6 +236,7 @@ const Index = () => {
         if (neighborTerritories.length > 0) {
           const delay = 800 + Math.random() * 1200;
           const timeoutId = setTimeout(() => {
+            if (isPausedRef.current) return; // guard against stale closure
             const targetId = neighborTerritories[Math.floor(Math.random() * neighborTerritories.length)];
             localGame.selectSettlementTerritory(targetId);
             botSelectionInProgressRef.current = false;
@@ -330,11 +333,12 @@ const Index = () => {
   }, [isInSession, leaveSession, localGame, botPlayer, questions]);
 
   // Handle pause toggle (single player only)
+  // isPausedRef keeps sync value for use inside setTimeout callbacks (avoids stale closures)
   const handleTogglePause = useCallback(() => {
     setIsPaused(prev => {
       const next = !prev;
+      isPausedRef.current = next; // sync update so setTimeout callbacks see it immediately
       if (next) {
-        // Pause: cancel pending bot answers
         botPlayer.cancelPendingAnswers();
       }
       return next;
