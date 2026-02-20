@@ -39,8 +39,8 @@ export function GameControls({
         )}
       </button>
 
-      {/* Pause button - only in single player, only when no question on screen */}
-      {isSinglePlayer && !showQuestionModal && onTogglePause && (
+      {/* Pause button - only in single player, always visible */}
+      {isSinglePlayer && onTogglePause && (
         <button
           onClick={onTogglePause}
           className={cn(
@@ -59,7 +59,7 @@ export function GameControls({
         </button>
       )}
 
-      {/* Pause overlay when paused */}
+      {/* Pause overlay when paused - only when no question modal blocking */}
       {isPaused && isSinglePlayer && !showQuestionModal && (
         <div className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm flex items-center justify-center"
           onClick={onTogglePause}
